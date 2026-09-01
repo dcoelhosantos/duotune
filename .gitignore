@@ -1,0 +1,14 @@
+# Front-end
+frontend/node_modules/
+frontend/dist/
+
+# Back-end
+backend/target/
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+
+# IDEs e SO
+.vscode/
+.idea/
+.DS_Store
