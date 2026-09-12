@@ -1,5 +1,3 @@
-SHELL := cmd.exe
-
 # --- INFRAESTRUTURA (DOCKER) ---
 
 # Sobe o banco de dados
@@ -18,15 +16,15 @@ reset-infra: down infra
 
 # Baixa as dependências e compila o projeto
 setup:
-	cd backend && mvn clean install -DskipTests
+	cd backend && ./mvnw clean install -DskipTests
 
 # Roda a aplicação
 run:
-	cd backend && mvn spring-boot:run
+	cd backend && ./mvnw spring-boot:run
 
 # Limpa a pasta target
 clean:
-	cd backend && mvn clean
+	cd backend && ./mvnw clean
 
 
 # --- COMANDOS GERAIS ---

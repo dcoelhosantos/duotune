@@ -11,7 +11,7 @@ import org.springframework.stereotype.Repository;
 public interface DuoRepository extends JpaRepository<Duo, Long> {
 
     @Query("""
-        SELECT CASE WHEN COUNT(d) > 0 THEN true ELSE false END
+        SELECT COUNT(d) > 0
         FROM Duo d
         WHERE d.status = :status
           AND (d.user1.id = :usuarioId OR d.user2.id = :usuarioId)

@@ -24,8 +24,7 @@ public class DuoService {
     private final InvitationRepository invitationRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
-    private static final String ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
+    private static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     public DuoService(DuoRepository duoRepository, InvitationRepository invitationRepository, UserRepository userRepository, EmailService emailService) {
         this.duoRepository = duoRepository;
         this.invitationRepository = invitationRepository;
@@ -60,14 +59,14 @@ public class DuoService {
         Invitation invitation = new Invitation();
         invitation.setSender(sender);
         invitation.setRecipient(recipient);
-        invitation.setCode(gerarCodigoUnico());
+        invitation.setCode(generateUniqueCode());
         invitation.setStatus(InvitationStatus.PENDING);
         invitation.setSentAt(OffsetDateTime.now());
         invitation.setExpiresAt(OffsetDateTime.now().plusHours(24));
 
         invitation = invitationRepository.save(invitation);
 
-        emailService.enviarEmailConvite(recipient.getEmail(), sender.getName(), invitation.getCode());
+        emailService.sendInvitationEmail(recipient.getEmail(), sender.getName(), invitation.getCode());
 
         return new InvitationResponse(
                 new InvitationData(invitation.getId(), invitation.getCode(), invitation.getStatus(), invitation.getExpiresAt()),
@@ -80,7 +79,12 @@ public class DuoService {
         User authenticatedUser = userRepository.findByEmail(authenticatedEmail)
                 .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "Usuário não encontrado."));
 
-        Invitation invitation = invitationRepository.findByCode(code.toUpperCase())
+        String formattedCode = code.toUpperCase().trim();
+        if (!formattedCode.startsWith("DUO-")) {
+            formattedCode = "DUO-" + formattedCode;
+        }
+
+        Invitation invitation = invitationRepository.findByCode(formattedCode)
                 .orElseThrow(() -> new BusinessException("INVITATION_NOT_FOUND", "Convite não encontrado."));
 
         if (invitation.getStatus() != InvitationStatus.PENDING) {
@@ -115,15 +119,15 @@ public class DuoService {
         return new DuoResponse(duoData);
     }
 
-    private String gerarCodigoUnico() {
+    private String generateUniqueCode() {
         SecureRandom random = new SecureRandom();
         String code;
         do {
-            StringBuilder sb = new StringBuilder(6);
-            for (int i = 0; i < 6; i++) {
-                sb.append(ALFABETO.charAt(random.nextInt(ALFABETO.length())));
+            StringBuilder sb = new StringBuilder(5);
+            for (int i = 0; i < 5; i++) {
+                sb.append(ALPHABET.charAt(random.nextInt(ALPHABET.length())));
             }
-            code = sb.toString();
+            code = "DUO-" + sb;
         } while (invitationRepository.findByCode(code).isPresent());
 
         return code;
