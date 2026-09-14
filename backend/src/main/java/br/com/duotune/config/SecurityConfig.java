@@ -20,8 +20,8 @@ public class SecurityConfig {
                     "/error",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
-                    "/swagger-ui.html"
-                ).permitAll()
+                    "/swagger-ui.html")
+                .permitAll()
                 .anyRequest().authenticated()
             );
         return http.build();
