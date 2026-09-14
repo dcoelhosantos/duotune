@@ -1,6 +1,7 @@
 package br.com.duotune.controller;
 
 import java.net.URI;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -30,10 +31,13 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+
         if (repository.findByEmail(request.email()).isPresent()) {
             // TODO: criar uma classe de erro padronizada
             return ResponseEntity.status(409).body(
-                    "{\"code\": \"EMAIL_ALREADY_EXISTS\", \"message\": \"Já existe um usuário cadastrado com este e-mail.\"}");
+                    Map.of(
+                            "code", "EMAIL_ALREADY_EXISTS",
+                            "message", "Já existe um usuário cadastrado com este e-mail."));
         }
 
         User user = new User();
@@ -60,8 +64,10 @@ public class AuthController {
         // Verifica se o usuário existe e se a senha bate com o hash salvo
         if (userOptional.isEmpty()
                 || !passwordEncoder.matches(request.password(), userOptional.get().getPasswordHash())) {
-            return ResponseEntity.status(401)
-                    .body("{\"code\": \"INVALID_CREDENTIALS\", \"message\": \"Credenciais inválidas.\"}");
+            return ResponseEntity.status(401).body(
+                    Map.of(
+                            "code", "INVALID_CREDENTIALS",
+                            "message", "Credenciais inválidas."));
         }
 
         User user = userOptional.get();
