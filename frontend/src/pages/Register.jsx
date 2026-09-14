@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -32,7 +32,6 @@ export default function Register() {
       return;
     }
     setError(null);
-
     setIsLoading(true);
 
     try {
@@ -56,7 +55,7 @@ export default function Register() {
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("user", JSON.stringify(data.user));
       navigate("/");
-    // eslint-disable-next-line no-unused-vars
+      // eslint-disable-next-line no-unused-vars
     } catch (err) {
       setError("Erro de conexão com o servidor.");
     } finally {
@@ -65,47 +64,117 @@ export default function Register() {
   };
 
   return (
-    <div>
-      <h2>Criar Conta - DuoTune</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="Nome (ex: Lucas Silva)"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          required
-        />
-        <input
-          type="email"
-          placeholder="E-mail"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Senha"
-          value={formData.password}
-          onChange={(e) =>
-            setFormData({ ...formData, password: e.target.value })
-          }
-          required
-        />
-        <input
-          type="password"
-          placeholder="Confirmar Senha"
-          value={formData.confirmPassword}
-          onChange={(e) =>
-            setFormData({ ...formData, confirmPassword: e.target.value })
-          }
-          required
-        />
-        {/* Botão travado durante o loading */}
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? "Cadastrando..." : "Cadastrar"}
-        </button>
-      </form>
+    <div className="min-h-screen flex">
+      {/* Coluna da Esquerda (Marca) */}
+      <div className="hidden lg:flex lg:w-1/2 bg-purple-950 flex-col justify-center items-center p-12 text-center">
+        <h1 className="text-5xl font-bold text-white mb-4">DuoTune</h1>
+        <h2 className="text-3xl font-semibold text-fuchsia-400 mb-6">
+          Música é melhor em dupla.
+        </h2>
+        <p className="text-purple-200 text-lg max-w-md">
+          Crie sua conta e comece a compartilhar sua trilha sonora.
+        </p>
+      </div>
+
+      {/* Coluna da Direita (Formulário) */}
+      <div className="w-full lg:w-1/2 bg-gray-950 flex items-center justify-center p-8">
+        <div className="max-w-md w-full">
+          <h2 className="text-3xl font-bold text-white mb-2">Criar Conta</h2>
+          <p className="text-gray-400 mb-8">Junte-se ao DuoTune</p>
+
+          {error && (
+            <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded mb-6 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-300 mb-1">
+                Nome completo
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: Joadson Ferreira"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                required
+                className="w-full p-3 bg-gray-900 rounded border border-gray-800 focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 outline-none text-white transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-300 mb-1">E-mail</label>
+              <input
+                type="email"
+                placeholder="seu@email.com"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                required
+                className="w-full p-3 bg-gray-900 rounded border border-gray-800 focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 outline-none text-white transition-colors"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-300 mb-1">
+                  Senha
+                </label>
+                <input
+                  type="password"
+                  placeholder="Mín. 8 caract."
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  required
+                  className="w-full p-3 bg-gray-900 rounded border border-gray-800 focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 outline-none text-white transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1">
+                  Confirmar Senha
+                </label>
+                <input
+                  type="password"
+                  placeholder="Repita a senha"
+                  value={formData.confirmPassword}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      confirmPassword: e.target.value,
+                    })
+                  }
+                  required
+                  className="w-full p-3 bg-gray-900 rounded border border-gray-800 focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 outline-none text-white transition-colors"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full p-3 mt-6 bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "Cadastrando..." : "Criar conta"}
+            </button>
+          </form>
+
+          <p className="text-center text-gray-400 mt-8 text-sm">
+            Já tem uma conta?{" "}
+            <Link
+              to="/login"
+              className="text-fuchsia-400 hover:text-fuchsia-300"
+            >
+              Entrar
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
