@@ -8,8 +8,10 @@
 
 # --- DETECÇÃO DE SISTEMA OPERACIONAL ---
 ifeq ($(OS),Windows_NT)
-	MVNW = ./mvnw.cmd
-	NPM = npm.cmd
+	SHELL := cmd.exe
+	.SHELLFLAGS := /C
+	MVNW = mvnw.cmd
+	NPM = npm
 else
 	MVNW = ./mvnw
 	NPM = npm
