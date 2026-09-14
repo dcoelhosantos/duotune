@@ -1,10 +1,14 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import { PrivateRoute } from './routes/PrivateRoute';
-
-// Exemplo de componente para a Home autenticada
-const Home = () => <h1>DuoTune - Home (Privada)</h1>;
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Home from "./pages/Home";
+import { PrivateRoute } from "./routes/PrivateRoute";
+import MainLayout from "./components/MainLayout";
 
 function App() {
   return (
@@ -16,11 +20,13 @@ function App() {
 
         {/* Rotas Privadas */}
         <Route element={<PrivateRoute />}>
-          <Route path="/" element={<Home />} />
-          {/* Adicionar futuras rotas privadas aqui (ex: /search, /fusion) */}
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<Home />} />
+            {/* Adicionar futuras rotas privadas aqui (ex: /search, /fusion) */}
+          </Route>
         </Route>
 
-        {/* Fallback */}
+        {/* Fallback (se o usuário digitar uma URL que não existe, joga para a Home) */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
