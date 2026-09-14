@@ -1,40 +1,47 @@
-# --- INFRAESTRUTURA (DOCKER) ---
+# ==============================================================================
+# [BACKEND] Rode 'make start-back'. Acesse o Swagger para testar a API:
+# 👉 http://localhost:8080/swagger-ui/index.html
+#
+# [FRONTEND] Rode 'make start-front'. Acesse a interface do React (Vite):
+# 👉 http://localhost:5173
+# ==============================================================================
 
-# Sobe o banco de dados
+# --- DETECÇÃO DE SISTEMA OPERACIONAL ---
+ifeq ($(OS),Windows_NT)
+	MVNW = ./mvnw.cmd
+else
+	MVNW = ./mvnw
+endif
+
+# --- INFRAESTRUTURA (DOCKER) ---
 infra:
 	docker compose up -d
 
-# Derruba o banco de dados
 down:
 	docker compose down
 
-# Reinicia a infraestrutura do zero
 reset-infra: down infra
 
 
 # --- BACKEND (SPRING BOOT) ---
+setup-back:
+	cd backend && $(MVNW) clean install -DskipTests
 
-# Baixa as dependências e compila o projeto
-setup:
-	cd backend && ./mvnw clean install -DskipTests
+run-back:
+	cd backend && $(MVNW) spring-boot:run
 
-# Roda a aplicação
-run:
-	cd backend && ./mvnw spring-boot:run
+clean-back:
+	cd backend && $(MVNW) clean
 
-# Limpa a pasta target
-clean:
-	cd backend && ./mvnw clean
+
+# --- FRONTEND (REACT + VITE) ---
+setup-front:
+	cd frontend && npm install
+
+run-front:
+	cd frontend && npm run dev
 
 
 # --- COMANDOS GERAIS ---
-
-# Prepara tudo e roda a aplicação
-start:
-	make infra
-	make setup
-	make run
-
-# Após rodar o 'make start' e o Spring Boot subir, acesse a documentação
-# e a área de testes da API (Swagger) pelo seu navegador no link:
-# 👉 http://localhost:8080/swagger-ui/index.html
+start-back: infra setup-back run-back
+start-front: setup-front run-front
