@@ -9,8 +9,10 @@
 # --- DETECÇÃO DE SISTEMA OPERACIONAL ---
 ifeq ($(OS),Windows_NT)
 	MVNW = ./mvnw.cmd
+	NPM = npm.cmd
 else
 	MVNW = ./mvnw
+	NPM = npm
 endif
 
 # --- INFRAESTRUTURA (DOCKER) ---
@@ -36,10 +38,10 @@ clean-back:
 
 # --- FRONTEND (REACT + VITE) ---
 setup-front:
-	cd frontend && npm install
+	cd frontend && $(NPM) install
 
 run-front:
-	cd frontend && npm run dev
+	cd frontend && $(NPM) run dev
 
 
 # --- COMANDOS GERAIS ---
