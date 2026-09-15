@@ -28,6 +28,9 @@ export default function GenerateInvite() {
         e.preventDefault();
         setIsLoading(true);
 
+        const cleanEmail = targetEmail.trim().toLowerCase();
+        console.log("Mock API payload:", cleanEmail);
+
         // TODO: Substituir o setTimeout por uma chamada POST para /api/v1/duos/invitations passando o 'targetEmail'.
         // TODO: Tratar erros como 404 (Usuário não encontrado) ou 409 (Já pareado) e exibir na tela.
         // TODO: Atualizar o state 'generatedCode' com o código retornado pelo backend.
@@ -218,9 +221,14 @@ export default function GenerateInvite() {
             </main>
 
             {showCancelModal && (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-fade-in px-4">
+                <div
+                    onClick={() => setShowCancelModal(false)}
+                    className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-fade-in px-4"
+                >
                     <div
-                        className="bg-[#170c30] p-8 rounded-2xl border border-purple-900/50 max-w-sm w-full text-center shadow-2xl">
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-[#170c30] p-8 rounded-2xl border border-purple-900/50 max-w-sm w-full text-center shadow-2xl"
+                    >
                         <h4 className="text-xl font-bold text-white mb-3">Cancelar convite?</h4>
                         <p className="text-gray-400 text-base mb-8">
                             O código gerado será invalidado e você precisará criar um novo para formar um duo.

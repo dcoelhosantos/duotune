@@ -1,21 +1,23 @@
 import {useState, useEffect} from "react";
 import {Link, useNavigate, useParams} from "react-router-dom";
 
+const validateFormat = (codeToTest) => {
+    const regex = /^DUO-[A-Z0-9]{5}$/;
+    return regex.test(codeToTest);
+};
+
 export default function AcceptInvite() {
     const {code} = useParams();
     const navigate = useNavigate();
 
-    const validateFormat = (codeToTest) => {
-        const regex = /^DUO-[A-Z0-9]{5}$/;
-        return regex.test(codeToTest);
-    };
-
-    const [inviteCode, setInviteCode] = useState(code || "");
+    const [inviteCode, setInviteCode] = useState(() => {
+        return code && validateFormat(code) ? code : "";
+    });
     const [viewState, setViewState] = useState("form");
 
     const [error, setError] = useState(() => {
         if (code && !validateFormat(code)) {
-            return "O link de convite é inválido ou está mal formatado.";
+            return "O link de convite acessado é inválido. Por favor, insira o código manualmente abaixo.";
         }
         return "";
     });
