@@ -7,6 +7,8 @@ import {
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/Home";
+import GenerateInvite from "./pages/GenerateInvite.jsx";
+import AcceptInvite from "./pages/AcceptInvite.jsx";
 import { PrivateRoute } from "./routes/PrivateRoute";
 import MainLayout from "./components/MainLayout";
 
@@ -15,6 +17,8 @@ function App() {
     <Router>
       <Routes>
         {/* Rotas Públicas */}
+        <Route path="/convidar" element={<GenerateInvite />} />
+        <Route path="/aceitar/:code?" element={<AcceptInvite />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
