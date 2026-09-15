@@ -14,10 +14,10 @@ public interface DuoRepository extends JpaRepository<Duo, Long> {
         SELECT COUNT(d) > 0
         FROM Duo d
         WHERE d.status = :status
-          AND (d.user1.id = :usuarioId OR d.user2.id = :usuarioId)
+          AND (d.user1.id = :userId OR d.user2.id = :userId)
     """)
     boolean existsActiveDuo(
-            @Param("usuarioId") Long usuarioId,
+            @Param("userId") Long userId,
             @Param("status") DuoStatus status
     );
 }
