@@ -1,3 +1,5 @@
+.env
+
 # Front-end
 frontend/node_modules/
 frontend/dist/

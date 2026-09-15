@@ -6,6 +6,12 @@
 # 👉 http://localhost:5173
 # ==============================================================================
 
+# --- CARREGA VARIÁVEIS DE AMBIENTE ---
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
+
 # --- DETECÇÃO DE SISTEMA OPERACIONAL ---
 ifeq ($(OS),Windows_NT)
 	MVNW = ./mvnw.cmd
