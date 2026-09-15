@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "duo")
+@Table(name = "duos")
 public class Duo {
 
     @Id
@@ -13,18 +13,18 @@ public class Duo {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_1_id", nullable = false)
+    @JoinColumn(name = "user1_id", nullable = false)
     private User user1;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_2_id")
+    @JoinColumn(name = "user2_id", nullable = false) // Mudei para false, pois um Duo só existe com 2 pessoas!
     private User user2;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DuoStatus status;
 
-    @Column(name = "data_formacao")
+    @Column(name = "formed_at")
     private OffsetDateTime formedAt;
 
     // Getters and Setters

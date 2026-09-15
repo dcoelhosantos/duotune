@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "convite_pareamento")
+@Table(name = "invitations")
 public class Invitation {
 
     @Id
@@ -13,24 +13,24 @@ public class Invitation {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "remetente_id", nullable = false)
+    @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "destinatario_id", nullable = false)
+    @JoinColumn(name = "recipient_id", nullable = false)
     private User recipient;
 
-    @Column(name = "codigo", nullable = false, unique = true, length = 10)
+    @Column(name = "code", nullable = false, unique = true, length = 10)
     private String code;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private InvitationStatus status;
 
-    @Column(name = "enviado_em", nullable = false)
+    @Column(name = "sent_at", nullable = false)
     private OffsetDateTime sentAt;
 
-    @Column(name = "expiracao", nullable = false)
+    @Column(name = "expires_at", nullable = false)
     private OffsetDateTime expiresAt;
 
     // Getters and Setters
