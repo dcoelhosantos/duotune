@@ -127,7 +127,7 @@ export default function AcceptInvite() {
                             <button
                                 type="submit"
                                 disabled={isLoading || inviteCode.length < 9}
-                                className="w-full py-4 bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl font-medium transition-colors disabled:opacity-50 text-base shadow-[0_0_20px_-5px_rgba(217,70,239,0.4)]"
+                                className="w-full py-4 bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-base shadow-[0_0_20px_-5px_rgba(217,70,239,0.4)]"
                             >
                                 {isLoading ? "Validando conexão..." : "Entrar no Duo"}
                             </button>

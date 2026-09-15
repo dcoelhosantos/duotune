@@ -109,7 +109,7 @@ export default function GenerateInvite() {
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full py-4 bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl font-medium transition-colors disabled:opacity-50 text-base"
+                                className="w-full py-4 bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-base"
                             >
                                 {isLoading ? "Gerando..." : "Gerar Link de Convite"}
                             </button>
@@ -183,7 +183,7 @@ export default function GenerateInvite() {
                                         </div>
                                         <button
                                             onClick={copyCode}
-                                            className={`px-8 py-3 rounded-lg font-medium h-full transition-colors text-base ${isCopied ? 'bg-green-600 text-white' : 'bg-purple-700 hover:bg-purple-600 text-white'}`}
+                                            className={`px-8 py-3 rounded-lg font-medium h-full transition-colors cursor-pointer text-base ${isCopied ? 'bg-green-600 text-white' : 'bg-purple-700 hover:bg-purple-600 text-white'}`}
                                         >
                                             {isCopied ? "Copiado!" : "Copiar"}
                                         </button>
@@ -198,12 +198,12 @@ export default function GenerateInvite() {
                                 </div>
 
                                 <button onClick={() => setShowCancelModal(true)}
-                                        className="text-base text-purple-400 hover:text-purple-300 transition-colors">
+                                        className="text-base text-purple-400 hover:text-purple-300 transition-colors cursor-pointer">
                                     Cancelar convite
                                 </button>
 
                                 <button onClick={simulateAcceptance}
-                                        className="mt-16 text-xs text-gray-600 border border-gray-800 px-3 py-1 rounded hover:bg-gray-900">
+                                        className="mt-16 text-xs text-gray-600 border border-gray-800 px-3 py-1 rounded hover:bg-gray-900 cursor-pointer">
                                     [Dev] Simular Aceite Completo
                                 </button>
                             </>
@@ -236,13 +236,13 @@ export default function GenerateInvite() {
                         <div className="flex gap-4">
                             <button
                                 onClick={() => setShowCancelModal(false)}
-                                className="flex-1 py-3 rounded-xl font-medium bg-gray-800 hover:bg-gray-700 text-white transition-colors text-base"
+                                className="flex-1 py-3 rounded-xl font-medium bg-gray-800 hover:bg-gray-700 text-white transition-colors cursor-pointer text-base"
                             >
                                 Voltar
                             </button>
                             <button
                                 onClick={confirmCancel}
-                                className="flex-1 py-3 rounded-xl font-medium bg-red-600/90 hover:bg-red-500 text-white transition-colors shadow-[0_0_15px_-3px_rgba(220,38,38,0.4)] text-base"
+                                className="flex-1 py-3 rounded-xl font-medium bg-red-600/90 hover:bg-red-500 text-white transition-colors cursor-pointer shadow-[0_0_15px_-3px_rgba(220,38,38,0.4)] text-base"
                             >
                                 Sim, cancelar
                             </button>
