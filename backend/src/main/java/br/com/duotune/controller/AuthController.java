@@ -1,7 +1,6 @@
 package br.com.duotune.controller;
 
 import java.net.URI;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,8 +15,10 @@ import br.com.duotune.dto.LoginRequest;
 import br.com.duotune.dto.RegisterRequest;
 import br.com.duotune.dto.RegisterResponse;
 import br.com.duotune.dto.UserResponse;
+import br.com.duotune.exception.dto.ErrorResponse;
 import br.com.duotune.model.User;
 import br.com.duotune.repository.UserRepository;
+import br.com.duotune.service.TokenService;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -27,17 +28,18 @@ public class AuthController {
     @Autowired
     private UserRepository repository;
 
+    @Autowired 
+    private TokenService tokenService;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
 
         if (repository.findByEmail(request.email()).isPresent()) {
-            // TODO: criar uma classe de erro padronizada
-            return ResponseEntity.status(409).body(
-                    Map.of(
-                            "code", "EMAIL_ALREADY_EXISTS",
-                            "message", "Já existe um usuário cadastrado com este e-mail."));
+                return ResponseEntity.status(409).body(
+                        new ErrorResponse("EMAIL_ALREADY_EXISTS", "Já existe um usuário cadastrado com este e-mail.")
+                );
         }
 
         User user = new User();
@@ -51,8 +53,8 @@ public class AuthController {
                 savedUser.getId(), savedUser.getName(), savedUser.getEmail(),
                 savedUser.getProfileImageUrl(), savedUser.getCreatedAt());
 
-        // TODO: implementar a geração de token JWT real
-        RegisterResponse response = new RegisterResponse(userResponse, "token-jwt-fake-provisorio", 3600L);
+        String token = tokenService.generateToken(savedUser.getEmail());
+        RegisterResponse response = new RegisterResponse(userResponse, token, 7200L);
 
         return ResponseEntity.created(URI.create("/api/v1/users/" + savedUser.getId())).body(response);
     }
@@ -61,13 +63,10 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         var userOptional = repository.findByEmail(request.email());
 
-        // Verifica se o usuário existe e se a senha bate com o hash salvo
-        if (userOptional.isEmpty()
-                || !passwordEncoder.matches(request.password(), userOptional.get().getPasswordHash())) {
-            return ResponseEntity.status(401).body(
-                    Map.of(
-                            "code", "INVALID_CREDENTIALS",
-                            "message", "Credenciais inválidas."));
+        if (userOptional.isEmpty() || !passwordEncoder.matches(request.password(), userOptional.get().getPasswordHash())) {
+                return ResponseEntity.status(401).body(
+                        new ErrorResponse("INVALID_CREDENTIALS", "Credenciais inválidas.")
+                );
         }
 
         User user = userOptional.get();
@@ -75,8 +74,8 @@ public class AuthController {
                 user.getId(), user.getName(), user.getEmail(),
                 user.getProfileImageUrl(), user.getCreatedAt());
 
-        // Retorna a mesma estrutura do cadastro para o frontend reaproveitar
-        RegisterResponse response = new RegisterResponse(userResponse, "token-jwt-fake-provisorio", 3600L);
+        String token = tokenService.generateToken(user.getEmail());
+        RegisterResponse response = new RegisterResponse(userResponse, token, 7200L);
 
         return ResponseEntity.ok(response);
     }
