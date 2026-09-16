@@ -30,6 +30,8 @@ function App() {
 
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
+            <Route path="/generate-invite" element={<GenerateInvite />} />
+            <Route path="/accept-invite" element={<AcceptInvite />} />
             {/* Adicionar futuras rotas privadas aqui (ex: /search, /fusion) */}
           </Route>
         </Route>
