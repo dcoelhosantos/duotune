@@ -32,6 +32,8 @@ function App() {
           {/* Telas com o layout padrão do app */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
+            <Route path="/generate-invite" element={<GenerateInvite />} />
+            <Route path="/accept-invite" element={<AcceptInvite />} />
             {/* Adicionar futuras rotas privadas aqui (ex: /search, /fusion) */}
           </Route>
         </Route>

@@ -6,13 +6,23 @@ export default function Topbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
+<<<<<<< HEAD
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const hasDuo = !!storedUser.duoId;
+=======
+  // MOCK: Altere para 'true' para testar a visão de quem já tem um Duo.
+  // IMPORTANTE: Isso será substituído pelos dados reais após implementação da Issue #40.
+  const hasDuo = false;
+>>>>>>> 41dd981faf61b28e1e40980e0726a2d0f80981a5
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("user");
+<<<<<<< HEAD
     navigate("/entrar");
+=======
+    navigate("/login");
+>>>>>>> 41dd981faf61b28e1e40980e0726a2d0f80981a5
   };
 
   return (
