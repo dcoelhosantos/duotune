@@ -8,7 +8,9 @@ const validateFormat = (codeToTest) => {
 
 const acceptInvitationApi = async (codeToProcess) => {
     const token = localStorage.getItem("accessToken");
-    const response = await fetch(`/api/v1/duos/invitations/${codeToProcess}/accept`, {        headers: {
+    const response = await fetch(`/api/v1/duos/invitations/${codeToProcess}/accept`, {
+        method: "POST",
+        headers: {
             "Authorization": `Bearer ${token}`
         }
     });

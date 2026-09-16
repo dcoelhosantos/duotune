@@ -123,7 +123,7 @@ public class DuoService {
         return new DuoResponse(duoData);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public String checkInvitationStatus(String code) {
         String formattedCode = code.toUpperCase().trim();
         if (!formattedCode.startsWith("DUO-")) {
@@ -132,6 +132,12 @@ public class DuoService {
 
         Invitation invitation = invitationRepository.findByCode(formattedCode)
                 .orElseThrow(() -> new BusinessException("INVITATION_NOT_FOUND", "Convite não encontrado."));
+
+        if (invitation.getStatus() == InvitationStatus.PENDING && OffsetDateTime.now().isAfter(invitation.getExpiresAt())) {
+            invitation.setStatus(InvitationStatus.EXPIRED);
+            invitationRepository.save(invitation);
+            return invitation.getStatus().name();
+        }
 
         return invitation.getStatus().name();
     }
