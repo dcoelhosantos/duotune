@@ -19,22 +19,24 @@ function App() {
       <Routes>
         {/* Rotas Públicas */}
         <Route element={<PublicRoute />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/entrar" element={<Login />} />
+          <Route path="/cadastrar" element={<Register />} />
         </Route>
 
         {/* Rotas Privadas */}
         <Route element={<PrivateRoute />}>
+          {/* Telas em tela cheia (Sem Sidebar/Topbar) */}
           <Route path="/convidar" element={<GenerateInvite />} />
           <Route path="/aceitar/:code?" element={<AcceptInvite />} />
 
+          {/* Telas com o layout padrão do app */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
             {/* Adicionar futuras rotas privadas aqui (ex: /search, /fusion) */}
           </Route>
         </Route>
 
-        {/* Fallback (se o usuário digitar uma URL que não existe, joga para a Home) */}
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
