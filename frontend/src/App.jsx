@@ -1,29 +1,33 @@
 import {
+  Navigate,
+  Route,
   BrowserRouter as Router,
   Routes,
-  Route,
-  Navigate,
 } from "react-router-dom";
+import MainLayout from "./components/MainLayout";
+import AcceptInvite from "./pages/AcceptInvite.jsx";
+import GenerateInvite from "./pages/GenerateInvite.jsx";
+import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Home from "./pages/Home";
-import GenerateInvite from "./pages/GenerateInvite.jsx";
-import AcceptInvite from "./pages/AcceptInvite.jsx";
 import { PrivateRoute } from "./routes/PrivateRoute";
-import MainLayout from "./components/MainLayout";
+import { PublicRoute } from "./routes/PublicRoute.jsx";
 
 function App() {
   return (
     <Router>
       <Routes>
         {/* Rotas Públicas */}
-        <Route path="/convidar" element={<GenerateInvite />} />
-        <Route path="/aceitar/:code?" element={<AcceptInvite />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route element={<PublicRoute />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Route>
 
         {/* Rotas Privadas */}
         <Route element={<PrivateRoute />}>
+          <Route path="/convidar" element={<GenerateInvite />} />
+          <Route path="/aceitar/:code?" element={<AcceptInvite />} />
+
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
             {/* Adicionar futuras rotas privadas aqui (ex: /search, /fusion) */}
