@@ -2,9 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function GenerateInvite() {
-  const [targetEmail, setTargetEmail] = useState("");
-  const [generatedCode, setGeneratedCode] = useState("");
-  const [viewState, setViewState] = useState("form");
+  const savedInvite = JSON.parse(localStorage.getItem("pendingInvite"));
+
+  const [targetEmail, setTargetEmail] = useState(savedInvite?.email || "");
+  const [generatedCode, setGeneratedCode] = useState(savedInvite?.code || "");
+  const [viewState, setViewState] = useState(savedInvite ? "waiting" : "form");
+
   const [isLoading, setIsLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -21,8 +24,9 @@ export default function GenerateInvite() {
   });
 
   const [partnerUser, setPartnerUser] = useState({
-    name: "Aguardando...",
+    name: savedInvite?.recipientName || "Aguardando...",
     avatar:
+      savedInvite?.avatar ||
       "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
   });
 
@@ -48,22 +52,28 @@ export default function GenerateInvite() {
             const data = await response.json();
 
             if (data.status === "ACCEPTED") {
-              clearInterval(intervalId); // Para de perguntar
+              clearInterval(intervalId);
+              localStorage.removeItem("pendingInvite");
 
               const currentUserData = JSON.parse(
                 localStorage.getItem("user") || "{}",
               );
-              currentUserData.duoId = true; 
+              currentUserData.duoId = true;
               localStorage.setItem("user", JSON.stringify(currentUserData));
 
               setViewState("paired");
-
               setTimeout(() => navigate("/"), 3500);
             } else if (data.status === "EXPIRED") {
               clearInterval(intervalId);
+              localStorage.removeItem("pendingInvite");
               alert("Este convite expirou (passaram-se 24 horas).");
               setViewState("form");
             }
+          } else {
+            clearInterval(intervalId);
+            localStorage.removeItem("pendingInvite");
+            setViewState("form");
+            setGeneratedCode("");
           }
         } catch (error) {
           console.error("Erro ao checar status do convite:", error);
@@ -102,6 +112,16 @@ export default function GenerateInvite() {
       }
 
       const data = await response.json();
+
+      localStorage.setItem(
+        "pendingInvite",
+        JSON.stringify({
+          code: data.invitation.code,
+          email: cleanEmail,
+          recipientName: data.recipient.name,
+          avatar: data.recipient.profileImageUrl,
+        }),
+      );
 
       setGeneratedCode(data.invitation.code);
       setViewState("waiting");
@@ -153,6 +173,7 @@ export default function GenerateInvite() {
         );
       }
 
+      localStorage.removeItem("pendingInvite");
       setShowCancelModal(false);
       setViewState("form");
       setTargetEmail("");
