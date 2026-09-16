@@ -66,7 +66,11 @@ public class DuoService {
 
         invitation = invitationRepository.save(invitation);
 
-        emailService.sendInvitationEmail(recipient.getEmail(), sender.getName(), invitation.getCode());
+        try {
+            emailService.sendInvitationEmail(recipient.getEmail(), sender.getName(), invitation.getCode());
+        } catch (Exception e) {
+            System.err.println("Aviso: Convite gerado no banco, mas falha ao enviar o e-mail do Google: " + e.getMessage());
+        }
 
         return new InvitationResponse(
                 new InvitationData(invitation.getId(), invitation.getCode(), invitation.getStatus(), invitation.getExpiresAt()),
@@ -117,6 +121,43 @@ public class DuoService {
         DuoData duoData = new DuoData(duo.getId(), duo.getStatus(), duo.getFormedAt(), List.of(u1, u2));
 
         return new DuoResponse(duoData);
+    }
+
+    @Transactional(readOnly = true)
+    public String checkInvitationStatus(String code) {
+        String formattedCode = code.toUpperCase().trim();
+        if (!formattedCode.startsWith("DUO-")) {
+            formattedCode = "DUO-" + formattedCode;
+        }
+
+        Invitation invitation = invitationRepository.findByCode(formattedCode)
+                .orElseThrow(() -> new BusinessException("INVITATION_NOT_FOUND", "Convite não encontrado."));
+
+        return invitation.getStatus().name();
+    }
+
+    @Transactional
+    public void cancelInvitation(String code, String authenticatedEmail) {
+        User authenticatedUser = userRepository.findByEmail(authenticatedEmail)
+                .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "Usuário não encontrado."));
+
+        String formattedCode = code.toUpperCase().trim();
+        if (!formattedCode.startsWith("DUO-")) {
+            formattedCode = "DUO-" + formattedCode;
+        }
+
+        Invitation invitation = invitationRepository.findByCode(formattedCode)
+                .orElseThrow(() -> new BusinessException("INVITATION_NOT_FOUND", "Convite não encontrado."));
+
+        if (!invitation.getSender().getId().equals(authenticatedUser.getId())) {
+            throw new BusinessException("UNAUTHORIZED_ACTION", "Você não tem permissão para cancelar este convite.");
+        }
+
+        if (invitation.getStatus() != InvitationStatus.PENDING) {
+            throw new BusinessException("INVALID_OPERATION", "Apenas convites pendentes podem ser cancelados.");
+        }
+
+        invitationRepository.delete(invitation);
     }
 
     private String generateUniqueCode() {

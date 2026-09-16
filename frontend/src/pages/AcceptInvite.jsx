@@ -6,6 +6,21 @@ const validateFormat = (codeToTest) => {
     return regex.test(codeToTest);
 };
 
+const acceptInvitationApi = async (codeToProcess) => {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(`/api/v1/duos/invitations/${codeToProcess}/accept`, {        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Link inválido ou expirado.");
+    }
+
+    return await response.json();
+};
+
 export default function AcceptInvite() {
     const {code} = useParams();
     const navigate = useNavigate();
@@ -26,40 +41,63 @@ export default function AcceptInvite() {
         return !!(code && validateFormat(code));
     });
 
-    // TODO: Substituir estes mocks pelos dados reais.
-    // currentUser virá do provedor de autenticação.
-    // partnerUser virá da resposta da chamada da API ao formar o Duo com sucesso.
-    const currentUser = {
-        name: "Maria",
+    const [storedUser] = useState(() => JSON.parse(localStorage.getItem("user") || "{}"));
+
+    const [currentUser, setCurrentUser] = useState({
+        name: storedUser.name || "Você",
+        avatar: storedUser.profileImageUrl || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+    });
+    const [partnerUser, setPartnerUser] = useState({
+        name: "Parceiro",
         avatar: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-    };
-    const partnerUser = {
-        name: "Paulo",
-        avatar: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-    };
-
-    const performPairingApiCall = () => {
-        // TODO: Substituir o setTimeout pela chamada HTTP real (POST /api/v1/duos/invitations/{code}/accept)
-        // TODO: Adicionar bloco try/catch para capturar erros 400 (inválido/expirado), 404 e 409 vindos da API e exibi-los no setError.
-        setTimeout(() => {
-            setIsLoading(false);
-            setViewState("paired");
-
-            // TODO: Atualizar o Contexto global da aplicação para sinalizar que o usuário agora possui um Duo ativo.
-            localStorage.setItem('accessToken', 'mock-token-dev');
-
-            setTimeout(() => {
-                navigate("/");
-            }, 3500);
-        }, 1500);
-    };
+    });
 
     useEffect(() => {
-        if (code && validateFormat(code)) {
-            performPairingApiCall();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [code]);
+        if (!code || !validateFormat(code)) return;
+
+        let isMounted = true;
+
+        const processUrlCode = async () => {
+            try {
+                const data = await acceptInvitationApi(code);
+
+                if (!isMounted) return;
+
+                const u1 = data.duo.members[0];
+                const u2 = data.duo.members[1];
+                const isUser1Me = u1.id === storedUser.id;
+
+                setCurrentUser({
+                    name: isUser1Me ? u1.name : u2.name,
+                    avatar: (isUser1Me ? u1.profileImageUrl : u2.profileImageUrl) || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+                });
+
+                setPartnerUser({
+                    name: isUser1Me ? u2.name : u1.name,
+                    avatar: (isUser1Me ? u2.profileImageUrl : u1.profileImageUrl) || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+                });
+
+                setIsLoading(false);
+                setViewState("paired");
+
+                setTimeout(() => {
+                    if (isMounted) navigate("/");
+                }, 3500);
+
+            } catch (err) {
+                if (!isMounted) return;
+                setIsLoading(false);
+                setError(err.message);
+                setViewState("form");
+            }
+        };
+
+        processUrlCode();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [code, navigate, storedUser.id]);
 
     const handleAccept = async (e) => {
         e.preventDefault();
@@ -71,7 +109,36 @@ export default function AcceptInvite() {
         }
 
         setIsLoading(true);
-        performPairingApiCall();
+
+        try {
+            const data = await acceptInvitationApi(inviteCode);
+
+            const u1 = data.duo.members[0];
+            const u2 = data.duo.members[1];
+            const isUser1Me = u1.id === storedUser.id;
+
+            setCurrentUser({
+                name: isUser1Me ? u1.name : u2.name,
+                avatar: (isUser1Me ? u1.profileImageUrl : u2.profileImageUrl) || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+            });
+
+            setPartnerUser({
+                name: isUser1Me ? u2.name : u1.name,
+                avatar: (isUser1Me ? u2.profileImageUrl : u1.profileImageUrl) || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+            });
+
+            setIsLoading(false);
+            setViewState("paired");
+
+            setTimeout(() => {
+                navigate("/");
+            }, 3500);
+
+        } catch (err) {
+            setIsLoading(false);
+            setError(err.message);
+            setViewState("form");
+        }
     };
 
     return (
