@@ -1,4 +1,4 @@
-import {useState, useRef} from "react";
+import {useState, useRef, useEffect} from "react";
 import {Link, useNavigate} from "react-router-dom";
 
 export default function GenerateInvite() {
@@ -12,34 +12,95 @@ export default function GenerateInvite() {
     const copyTimeoutRef = useRef(null);
     const navigate = useNavigate();
 
-    // TODO: Substituir o mock do currentUser pelos dados do usuário logado.
-    const currentUser = {
-        name: "Paulo",
-        avatar: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-    };
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const [currentUser] = useState({
+        name: storedUser.name || "Você",
+        avatar: storedUser.profileImageUrl || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+    });
 
-    // TODO: Os dados do partnerUser devem iniciar vazios e ser preenchidos dinamicamente quando a API confirmar que o destinatário aceitou o convite.
-    const partnerUser = {
-        name: "Maria",
+    const [partnerUser, setPartnerUser] = useState({
+        name: "Aguardando...",
         avatar: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-    };
+    });
+
+    useEffect(() => {
+        let intervalId;
+
+        if (viewState === "waiting" && generatedCode) {
+            intervalId = setInterval(async () => {
+                try {
+                    const token = localStorage.getItem("accessToken");
+
+                    const response = await fetch(`/api/v1/duos/invitations/${generatedCode}/status`, {
+                        headers: {
+                            "Authorization": `Bearer ${token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+
+                        if (data.status === "ACCEPTED") {
+                            clearInterval(intervalId); // Para de perguntar
+
+                            setViewState("paired");
+
+                            setTimeout(() => navigate("/"), 3500);
+                        } else if (data.status === "EXPIRED") {
+                            clearInterval(intervalId);
+                            alert("Este convite expirou (passaram-se 24 horas).");
+                            setViewState("form");
+                        }
+                    }
+                } catch (error) {
+                    console.error("Erro ao checar status do convite:", error);
+                }
+            }, 3000);
+        }
+
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
+    }, [viewState, generatedCode, navigate]);
 
     const handleGenerate = async (e) => {
         e.preventDefault();
         setIsLoading(true);
 
         const cleanEmail = targetEmail.trim().toLowerCase();
-        console.log("Mock API payload:", cleanEmail);
 
-        // TODO: Substituir o setTimeout por uma chamada POST para /api/v1/duos/invitations passando o 'targetEmail'.
-        // TODO: Tratar erros como 404 (Usuário não encontrado) ou 409 (Já pareado) e exibir na tela.
-        // TODO: Atualizar o state 'generatedCode' com o código retornado pelo backend.
-        // TODO: Após o sucesso, iniciar escuta via WebSocket (ou Long Polling) para saber o momento exato em que o parceiro aceitar.
-        setTimeout(() => {
-            setGeneratedCode("DUO-A1B2C");
+        try {
+            const token = localStorage.getItem("accessToken");
+
+            const response = await fetch("/api/v1/duos/invitations", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({email: cleanEmail}),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || "Não foi possível gerar o convite.");
+            }
+
+            const data = await response.json();
+
+            setGeneratedCode(data.invitation.code);
             setViewState("waiting");
+            setPartnerUser({
+                name: data.recipient.name,
+                avatar: data.recipient.profileImageUrl || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+            });
+
+        } catch (err) {
+            console.error("Erro na integração:", err);
+            alert(err.message);
+        } finally {
             setIsLoading(false);
-        }, 1000);
+        }
     };
 
     const copyCode = () => {
@@ -55,20 +116,31 @@ export default function GenerateInvite() {
         }, 2000);
     };
 
-    const confirmCancel = () => {
-        // TODO: Fazer uma requisição à API para invalidar ou deletar o convite gerado no banco de dados.
-        setShowCancelModal(false);
-        setViewState("form");
-        setTargetEmail("");
-    };
+    const confirmCancel = async () => {
+        try {
+            const token = localStorage.getItem("accessToken");
 
-    // TODO: Remover esta função e o botão de dev em produção. A mudança para 'paired' deve ocorrer automaticamente através do WebSocket/Polling citado acima.
-    const simulateAcceptance = () => {
-        setViewState("paired");
-        localStorage.setItem('accessToken', 'mock-token-dev');
-        setTimeout(() => {
-            navigate("/");
-        }, 3000);
+            const response = await fetch(`/api/v1/duos/invitations/${generatedCode}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || "Erro ao tentar cancelar o convite.");
+            }
+
+            setShowCancelModal(false);
+            setViewState("form");
+            setTargetEmail("");
+            setGeneratedCode("");
+
+        } catch (err) {
+            console.error("Erro ao cancelar:", err);
+            alert(err.message);
+        }
     };
 
     return (
@@ -147,7 +219,7 @@ export default function GenerateInvite() {
                                     )}
                                 </div>
                                 <span className="mt-4 text-base md:text-lg font-medium text-gray-200">
-                                    {viewState === "waiting" ? "Aguardando..." : partnerUser.name}
+                                    {partnerUser.name}
                                 </span>
                             </div>
                         </div>
@@ -200,11 +272,6 @@ export default function GenerateInvite() {
                                 <button onClick={() => setShowCancelModal(true)}
                                         className="text-base text-purple-400 hover:text-purple-300 transition-colors cursor-pointer">
                                     Cancelar convite
-                                </button>
-
-                                <button onClick={simulateAcceptance}
-                                        className="mt-16 text-xs text-gray-600 border border-gray-800 px-3 py-1 rounded hover:bg-gray-900 cursor-pointer">
-                                    [Dev] Simular Aceite Completo
                                 </button>
                             </>
                         ) : (
