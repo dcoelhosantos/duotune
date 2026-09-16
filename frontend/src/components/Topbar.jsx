@@ -6,14 +6,13 @@ export default function Topbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
-  // MOCK: Altere para 'true' para testar a visão de quem já tem um Duo.
-  // IMPORTANTE: Isso será substituído pelos dados reais após implementação da Issue #40.
-  const hasDuo = false;
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const hasDuo = !!storedUser.duoId;
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("user");
-    navigate("/login");
+    navigate("/entrar");
   };
 
   return (
@@ -65,13 +64,13 @@ export default function Topbar() {
             ) : (
               <>
                 <Link
-                  to="/generate-invite"
+                  to="/convidar"
                   className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
                 >
                   Enviar Convite
                 </Link>
                 <Link
-                  to="/accept-invite"
+                  to="/aceitar"
                   className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
                 >
                   Aceitar Convite

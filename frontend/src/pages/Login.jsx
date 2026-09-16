@@ -118,7 +118,7 @@ export default function Login() {
           <p className="text-center text-gray-400 mt-8 text-sm">
             Não tem uma conta?{" "}
             <Link
-              to="/register"
+              to="/cadastrar"
               className="text-fuchsia-400 hover:text-fuchsia-300"
             >
               Criar conta

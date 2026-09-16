@@ -2,7 +2,10 @@ import { FiPlay, FiUserPlus } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
 export default function Home() {
-  const hasDuo = false;
+  
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+  const hasDuo = !!storedUser.duoId;
 
   const playlists = [
     {
@@ -45,7 +48,7 @@ export default function Home() {
             </p>
           </div>
           <Link
-            to="/generate-invite"
+            to="/convidar"
             className="mt-6 md:mt-0 bg-white text-fuchsia-700 px-6 py-3 rounded-full font-bold hover:bg-gray-100 transition-colors flex items-center gap-2 shadow-md hover:scale-105"
           >
             <FiUserPlus size={20} />
