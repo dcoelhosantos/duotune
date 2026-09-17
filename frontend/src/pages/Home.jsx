@@ -67,7 +67,7 @@ export default function Home() {
               className="flex items-center gap-4 bg-gray-800/50 hover:bg-gray-800 transition-colors rounded-md overflow-hidden cursor-pointer group"
             >
               <div
-                className={`w-20 h-20 ${playlist.color} flex-shrink-0 shadow-lg`}
+                className={`w-20 h-20 ${playlist.color} shrink-0 shadow-lg`}
               />
               <div className="font-semibold">{playlist.name}</div>
               <button className="ml-auto mr-4 w-12 h-12 bg-fuchsia-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-xl hover:scale-105">

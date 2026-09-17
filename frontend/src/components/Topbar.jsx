@@ -1,11 +1,18 @@
 import { useState } from "react";
-import { FiSearch, FiUser, FiChevronDown, FiLogOut } from "react-icons/fi";
+import { FiChevronDown, FiLogOut, FiSearch, FiUser } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function Topbar() {
+  const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && searchTerm.trim()) {
+      navigate(`/buscar?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
 
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const hasDuo = !!storedUser.duoId;
@@ -23,7 +30,7 @@ export default function Topbar() {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("user");
     localStorage.removeItem("pendingInvite");
-    navigate("/entrar");
+    navigate("/login");
   };
 
   return (
@@ -36,6 +43,9 @@ export default function Topbar() {
           />
           <input
             type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="O que você quer ouvir?"
             className="w-full bg-gray-900 text-white rounded-full py-3 pl-12 pr-4 border border-gray-800 focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-all"
           />
@@ -92,6 +102,7 @@ export default function Topbar() {
 
               <div className="border-t border-gray-800 my-1"></div>
               <button
+                type="button"
                 onClick={handleLogoutClick}
                 className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800 hover:text-red-300 transition-colors flex items-center gap-2 cursor-pointer"
               >
@@ -121,12 +132,14 @@ export default function Topbar() {
             </p>
             <div className="flex gap-4">
               <button
+                type="button"
                 onClick={() => setShowLogoutModal(false)}
                 className="flex-1 py-3 rounded-xl font-medium bg-gray-800 hover:bg-gray-700 text-white transition-colors cursor-pointer text-base"
               >
                 Cancelar
               </button>
               <button
+                type="button"
                 onClick={confirmLogout}
                 className="flex-1 py-3 rounded-xl font-medium bg-red-600/90 hover:bg-red-500 text-white transition-colors cursor-pointer shadow-[0_0_15px_-3px_rgba(220,38,38,0.4)] text-base"
               >
