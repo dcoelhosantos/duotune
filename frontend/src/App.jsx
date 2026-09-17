@@ -10,6 +10,7 @@ import GenerateInvite from "./pages/GenerateInvite.jsx";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Search from "./pages/Search.jsx";
 import { PrivateRoute } from "./routes/PrivateRoute";
 import { PublicRoute } from "./routes/PublicRoute.jsx";
 
@@ -32,7 +33,7 @@ function App() {
           {/* Telas com o layout padrão do app */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
-            {/* Adicionar futuras rotas privadas aqui (ex: /search, /fusion) */}
+            <Route path="/buscar" element={<Search />} />
           </Route>
         </Route>
 

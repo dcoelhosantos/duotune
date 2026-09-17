@@ -48,7 +48,7 @@ public class SpotifyService {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public List<TrackResponseDTO> searchTracks(String query) {
         String token = getAccessToken();
-        String url = "https://api.spotify.com/v1/search?type=track&limit=5&q=" + query; 
+        String url = "https://api.spotify.com/v1/search?type=track&limit=10&q=" + query; 
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token); 
@@ -66,9 +66,27 @@ public class SpotifyService {
             String title = item.get("name").toString();
             
             List<Map<String, Object>> artists = (List<Map<String, Object>>) item.get("artists");
-            String artist = artists.get(0).get("name").toString(); 
+            String artist = (artists != null && !artists.isEmpty()) 
+                ? artists.get(0).get("name").toString() 
+                : "Desconhecido";
             
-            tracks.add(new TrackResponseDTO(id, title, artist));
+            String imageUrl = null;
+            Map<String, Object> album = (Map<String, Object>) item.get("album");
+            if (album != null && album.get("images") != null) {
+                List<Map<String, Object>> images = (List<Map<String, Object>>) album.get("images");
+                if (!images.isEmpty()) {
+                    imageUrl = images.get(0).get("url").toString();
+                }
+            }
+
+            Object previewObj = item.get("preview_url");
+
+            //TODO: Trocar URL para null depois que que der para tocar músicas
+            String previewUrl = (previewObj != null) 
+                ? previewObj.toString() 
+                : "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+
+            tracks.add(new TrackResponseDTO(id, title, artist, imageUrl, previewUrl));
         }
 
         return tracks;
