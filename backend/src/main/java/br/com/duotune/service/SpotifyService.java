@@ -80,6 +80,8 @@ public class SpotifyService {
             }
 
             Object previewObj = item.get("preview_url");
+
+            //TODO: Trocar URL para null depois que que der para tocar músicas
             String previewUrl = (previewObj != null) 
                 ? previewObj.toString() 
                 : "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";

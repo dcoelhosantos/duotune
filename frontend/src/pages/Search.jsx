@@ -61,7 +61,7 @@ export default function Search() {
         }
 
         const response = await fetch(
-          `http://localhost:8080/api/spotify/search?q=${encodeURIComponent(query)}`,
+          `/api/spotify/search?q=${encodeURIComponent(query)}`,
           {
             method: "GET",
             headers: {
