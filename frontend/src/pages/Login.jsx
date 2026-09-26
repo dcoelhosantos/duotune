@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 
 export default function Login() {
-  const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,16 +31,30 @@ export default function Login() {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        setError(data.message || "Credenciais inválidas.");
+        const messages = {
+          401: "Credenciais inválidas.",
+          403: "O servidor bloqueou o acesso. Verifique o endereço usado para abrir o DuoTune.",
+        };
+        setError(
+          data?.message ||
+            messages[response.status] ||
+            "O servidor não conseguiu concluir o login. Tente novamente.",
+        );
+        return;
+      }
+
+      if (!data?.accessToken || !data?.user) {
+        setError("O servidor retornou uma resposta inválida. Tente novamente.");
         return;
       }
 
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("user", JSON.stringify(data.user));
-      navigate("/");
+      // Inicia a sessão com um SDK novo, sem reaproveitar o dispositivo do login anterior.
+      window.location.replace("/");
       // eslint-disable-next-line no-unused-vars
     } catch (err) {
       setError("Erro de conexão com o servidor.");
@@ -68,6 +82,15 @@ export default function Login() {
         <div className="max-w-md w-full">
           <h2 className="text-3xl font-bold text-white mb-2">Entrar</h2>
           <p className="text-gray-400 mb-8">Bem-vindo de volta! &lt;3</p>
+
+          {location.state?.sessionExpired && !error && (
+            <p
+              role="status"
+              className="mb-6 rounded border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200"
+            >
+              Sua sessão do DuoTune expirou. Entre novamente para continuar.
+            </p>
+          )}
 
           {error && (
             <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded mb-6 text-sm">

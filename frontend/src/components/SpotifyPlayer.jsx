@@ -1,0 +1,182 @@
+import { useState } from "react";
+import {
+  FiX,
+  FiMusic,
+  FiPause,
+  FiPlay,
+  FiVolume1,
+  FiVolume2,
+  FiVolumeX,
+} from "react-icons/fi";
+import SpotifyProgress from "./SpotifyProgress";
+import { Link } from "react-router-dom";
+import { useSpotify } from "../spotify/SpotifyContext";
+
+export default function SpotifyPlayer() {
+  const {
+    needsAuthorization,
+    playerVisible,
+    closePlayer,
+    connected,
+    loading,
+    deviceId,
+    currentTrack,
+    isPlaying,
+    error,
+    busy,
+    playTrack,
+    seekTo,
+    position,
+    duration,
+    canSeek,
+    volume,
+    changeVolume,
+    toggleMute,
+  } = useSpotify();
+  const [volumeDraft, setVolumeDraft] = useState(null);
+  function commitVolume() {
+    if (volumeDraft === null || busy || !deviceId) return;
+    void changeVolume(volumeDraft / 100);
+    setVolumeDraft(null);
+  }
+
+  const cover = currentTrack?.album?.images?.[0]?.url;
+  const volumePercent = volumeDraft ?? Math.round(volume * 100);
+  if (!playerVisible) return null;
+  return (
+    <footer
+      className="shrink-0 border-t border-gray-800 bg-gray-950 relative px-4 sm:px-8 pr-12 sm:pr-16 py-4 shadow-lg"
+      aria-label="Player do Spotify"
+    >
+      <button
+        type="button"
+        disabled={busy}
+        onClick={closePlayer}
+        aria-label="Fechar player e pausar música"
+        title="Fechar player"
+        className="absolute top-3 right-3 p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-40"
+      >
+        <FiX size={18} />
+      </button>
+      {error && (
+        <p role="alert" className="text-red-300 text-sm mb-3">
+          {error}{" "}
+          {needsAuthorization ? (
+            <Link to="/perfil" className="underline">
+              Reconectar com Spotify
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => window.location.reload()}
+              className="underline disabled:opacity-50"
+            >
+              Recarregar player
+            </button>
+          )}
+        </p>
+      )}
+      {loading ? (
+        <p className="text-sm text-gray-400">Carregando Spotify...</p>
+      ) : !connected ? (
+        <Link
+          to="/perfil"
+          className="flex items-center gap-3 text-sm text-fuchsia-300"
+        >
+          <FiMusic />
+          Conecte o Spotify no perfil para ouvir músicas completas.
+        </Link>
+      ) : (
+        <div className="flex flex-wrap items-center gap-4 lg:gap-6">
+          <div className="flex items-center gap-3 min-w-0 flex-1 basis-40">
+            <div className="w-12 h-12 rounded-lg bg-gray-800 overflow-hidden shrink-0 flex items-center justify-center">
+              {cover ? (
+                <img
+                  src={cover}
+                  alt="Capa do álbum"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <FiMusic className="text-fuchsia-400" size={22} />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">
+                {currentTrack?.name || "Sua próxima música espera por você"}
+              </p>
+              <p className="text-xs text-gray-400 truncate mt-1">
+                {currentTrack
+                  ? currentTrack.artists.map((artist) => artist.name).join(", ")
+                  : deviceId
+                    ? "Escolha uma faixa na busca"
+                    : "Conectando ao Spotify..."}
+              </p>
+            </div>
+          </div>
+          <button
+            disabled={!deviceId || busy || !currentTrack}
+            onClick={() => playTrack(currentTrack)}
+            aria-label={isPlaying ? "Pausar música" : "Reproduzir música"}
+            className="w-11 h-11 rounded-full bg-white text-gray-950 flex items-center justify-center hover:bg-fuchsia-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+          >
+            {isPlaying ? (
+              <FiPause size={21} />
+            ) : (
+              <FiPlay size={21} className="ml-0.5" />
+            )}
+          </button>
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              disabled={!deviceId || busy}
+              onClick={toggleMute}
+              aria-label={volume === 0 ? "Ativar som" : "Silenciar"}
+              aria-pressed={volume === 0}
+              title={volume === 0 ? "Ativar som" : "Silenciar"}
+              className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white disabled:opacity-40"
+            >
+              {volume === 0 ? (
+                <FiVolumeX size={20} />
+              ) : volume < 0.5 ? (
+                <FiVolume1 size={20} />
+              ) : (
+                <FiVolume2 size={20} />
+              )}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={volumePercent}
+              disabled={!deviceId || busy}
+              onChange={(event) => setVolumeDraft(Number(event.target.value))}
+              onPointerDown={(event) =>
+                event.currentTarget.setPointerCapture(event.pointerId)
+              }
+              onPointerUp={commitVolume}
+              onKeyUp={commitVolume}
+              onPointerCancel={() => setVolumeDraft(null)}
+              onBlur={commitVolume}
+              aria-label="Volume"
+              aria-valuetext={`${volumePercent}%`}
+              className="w-20 sm:w-24 accent-fuchsia-500 cursor-pointer disabled:opacity-40"
+            />
+            <span className="w-9 text-right text-xs tabular-nums text-gray-400">
+              {volumePercent}%
+            </span>
+          </div>
+        </div>
+      )}
+      {currentTrack && (
+        <SpotifyProgress
+          key={currentTrack.id}
+          position={position}
+          duration={duration}
+          disabled={!deviceId || busy || !canSeek}
+          onSeek={(target) => seekTo(target, currentTrack.id)}
+        />
+      )}
+    </footer>
+  );
+}

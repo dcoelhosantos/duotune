@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiChevronDown, FiLogOut, FiSearch, FiUser } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -14,9 +14,18 @@ export default function Topbar() {
     }
   };
 
-  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const hasDuo = !!storedUser.duoId;
+  const [storedUser, setStoredUser] = useState(() =>
+    JSON.parse(localStorage.getItem("user") || "{}"),
+  );
 
+  useEffect(() => {
+    const refresh = () =>
+      setStoredUser(JSON.parse(localStorage.getItem("user") || "{}"));
+    window.addEventListener("profile-updated", refresh);
+    return () => window.removeEventListener("profile-updated", refresh);
+  }, []);
+
+  const hasDuo = !!storedUser.duoId;
   const userName = storedUser.name
     ? storedUser.name.split(" ")[0]
     : "Meu Perfil";
@@ -30,7 +39,7 @@ export default function Topbar() {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("user");
     localStorage.removeItem("pendingInvite");
-    navigate("/login");
+    navigate("/entrar");
   };
 
   return (
@@ -56,8 +65,16 @@ export default function Topbar() {
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center gap-3 bg-gray-900 rounded-full py-1.5 px-4 cursor-pointer hover:bg-gray-800 transition-colors border border-gray-800"
           >
-            <div className="bg-fuchsia-600 rounded-full p-1.5">
-              <FiUser size={18} className="text-white" />
+            <div className="bg-fuchsia-600 rounded-full p-0.5">
+              {storedUser.profileImageUrl ? (
+                <img
+                  src={storedUser.profileImageUrl}
+                  alt=""
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <FiUser size={18} className="text-white" />
+              )}
             </div>
             <span className="text-sm font-medium text-white select-none">
               {userName}
@@ -70,7 +87,7 @@ export default function Topbar() {
           {isDropdownOpen && (
             <div className="absolute right-0 mt-1 w-48 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl py-2 z-50 overflow-hidden">
               <Link
-                to="#"
+                to="/perfil"
                 className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
               >
                 Gerenciar Perfil
