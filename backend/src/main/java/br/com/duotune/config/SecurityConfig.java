@@ -24,7 +24,7 @@ public class SecurityConfig {
     @Autowired
     private SecurityFilter securityFilter;
 
-    @Value("${frontend.url:http://localhost:5173}")
+    @Value("${frontend.url}")
     private String frontendUrl;
 
     @Bean
@@ -38,6 +38,7 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/v1/auth/register",
                     "/api/v1/auth/login",
+                    "/api/spotify/callback",
                     "/api/v1/duos/**",
                     "/error",
                     "/v3/api-docs/**",

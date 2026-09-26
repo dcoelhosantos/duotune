@@ -1,6 +1,9 @@
 package br.com.duotune.model;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -26,13 +29,28 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(name = "profile_image_url")
+    @Column(name = "profile_image_url", columnDefinition = "text")
     private String profileImageUrl;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // Getters and Setters
+    @JsonIgnore
+    @Column(length = 2048)
+    private String spotifyId;
+
+    @JsonIgnore
+    @Column(length = 2048)
+    private String spotifyAccessToken;
+
+    @JsonIgnore
+    @Column(length = 2048)
+    private String spotifyRefreshToken;
+
+    @JsonIgnore
+    private Instant spotifyExpiresAt;
+
+    // Métodos de acesso
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -50,4 +68,20 @@ public class User {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    @JsonIgnore
+    public String getSpotifyId() { return spotifyId; }
+    public void setSpotifyId(String spotifyId) { this.spotifyId = spotifyId; }
+
+    @JsonIgnore
+    public String getSpotifyAccessToken() { return spotifyAccessToken; }
+    public void setSpotifyAccessToken(String spotifyAccessToken) { this.spotifyAccessToken = spotifyAccessToken; }
+
+    @JsonIgnore
+    public String getSpotifyRefreshToken() { return spotifyRefreshToken; }
+    public void setSpotifyRefreshToken(String spotifyRefreshToken) { this.spotifyRefreshToken = spotifyRefreshToken; }
+
+    @JsonIgnore
+    public Instant getSpotifyExpiresAt() { return spotifyExpiresAt; }
+    public void setSpotifyExpiresAt(Instant spotifyExpiresAt) { this.spotifyExpiresAt = spotifyExpiresAt; }
 }

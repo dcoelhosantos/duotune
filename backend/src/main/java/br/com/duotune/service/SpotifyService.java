@@ -48,7 +48,10 @@ public class SpotifyService {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public List<TrackResponseDTO> searchTracks(String query) {
         String token = getAccessToken();
-        String url = "https://api.spotify.com/v1/search?type=track&limit=10&q=" + query; 
+        java.net.URI url = org.springframework.web.util.UriComponentsBuilder
+            .fromUriString("https://api.spotify.com/v1/search")
+            .queryParam("type", "track").queryParam("limit", 10).queryParam("q", "{query}")
+            .encode().buildAndExpand(query).toUri();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token); 
@@ -81,10 +84,9 @@ public class SpotifyService {
 
             Object previewObj = item.get("preview_url");
 
-            //TODO: Trocar URL para null depois que que der para tocar músicas
             String previewUrl = (previewObj != null) 
                 ? previewObj.toString() 
-                : "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+                : null;
 
             tracks.add(new TrackResponseDTO(id, title, artist, imageUrl, previewUrl));
         }
