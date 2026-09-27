@@ -3,16 +3,15 @@ package br.com.duotune.service;
 import br.com.duotune.dto.PlaylistRequest;
 import br.com.duotune.dto.PlaylistResponse;
 import br.com.duotune.dto.TrackAddRequest;
+import br.com.duotune.exception.BusinessException;
 import br.com.duotune.model.Playlist;
 import br.com.duotune.model.PlaylistTrack;
 import br.com.duotune.model.User;
 import br.com.duotune.repository.PlaylistRepository;
 import br.com.duotune.repository.PlaylistTrackRepository;
 import br.com.duotune.repository.UserRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,7 +32,7 @@ public class PlaylistService {
 
     private User getAuthenticatedUser(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não encontrado."));
+                .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "Usuário não encontrado."));
     }
 
     @Transactional
@@ -64,18 +63,18 @@ public class PlaylistService {
     public void addTrackToPlaylist(Long playlistId, TrackAddRequest request, String email) {
         User user = getAuthenticatedUser(email);
 
-        Playlist playlist = playlistRepository.findById(playlistId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Playlist não encontrada."));
+        Playlist playlist = playlistRepository.findByIdAndLock(playlistId)
+                .orElseThrow(() -> new BusinessException("PLAYLIST_NOT_FOUND", "Playlist não encontrada."));
 
         // Regra: Impedir adição em playlist de outro usuário
         if (!playlist.getUser().getId().equals(user.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+            throw new BusinessException("UNAUTHORIZED_ACTION",
                     "Você não tem permissão para adicionar músicas nesta playlist.");
         }
 
         // Regra: Tratar duplicidade de faixas
         if (playlistTrackRepository.existsByPlaylistIdAndTrackSpotifyId(playlistId, request.trackSpotifyId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta música já está na playlist.");
+            throw new BusinessException("TRACK_ALREADY_EXISTS", "Esta música já está na playlist.");
         }
 
         int nextPosition = playlistTrackRepository.countByPlaylistId(playlistId) + 1;

@@ -3,10 +3,14 @@ package br.com.duotune.controller;
 import br.com.duotune.dto.PlaylistRequest;
 import br.com.duotune.dto.PlaylistResponse;
 import br.com.duotune.dto.TrackAddRequest;
+import br.com.duotune.exception.BusinessException;
+import br.com.duotune.exception.dto.ErrorResponse;
 import br.com.duotune.service.PlaylistService;
 import jakarta.validation.Valid;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -40,5 +44,31 @@ public class PlaylistController {
             Principal principal) {
         playlistService.addTrackToPlaylist(id, request, principal.getName());
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    // --- TRATAMENTO DE EXCEÇÕES PADRONIZADO --- //
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> businessError(BusinessException error) {
+        HttpStatus status = switch (error.getCode()) {
+            case "PLAYLIST_NOT_FOUND", "USER_NOT_FOUND" -> HttpStatus.NOT_FOUND;
+            case "UNAUTHORIZED_ACTION" -> HttpStatus.FORBIDDEN;
+            case "TRACK_ALREADY_EXISTS" -> HttpStatus.CONFLICT;
+            default -> HttpStatus.BAD_REQUEST;
+        };
+        return ResponseEntity.status(status).body(new ErrorResponse(error.getCode(), error.getMessage()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> dataIntegrityError(DataIntegrityViolationException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse("TRACK_ALREADY_EXISTS", "Esta música já está na playlist."));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> invalidRequest(MethodArgumentNotValidException error) {
+        var field = error.getBindingResult().getFieldError();
+        return ResponseEntity.badRequest().body(new ErrorResponse("INVALID_DATA",
+                field == null ? "Dados inválidos." : field.getDefaultMessage()));
     }
 }
