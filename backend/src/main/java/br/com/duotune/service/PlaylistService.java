@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class PlaylistService {
@@ -41,12 +40,12 @@ public class PlaylistService {
 
         Playlist playlist = new Playlist();
         playlist.setUser(user);
-        playlist.setName(request.name().trim());
+        playlist.setName(request.name() != null ? request.name().trim() : "Playlist Sem Nome");
         playlist.setIsFusion(false);
 
         Playlist saved = playlistRepository.save(playlist);
 
-        return new PlaylistResponse(saved.getId(), saved.getName(), saved.getIsFusion(), saved.getCreatedAt());
+        return PlaylistResponse.fromEntity(saved);
     }
 
     @Transactional(readOnly = true)
@@ -55,8 +54,8 @@ public class PlaylistService {
 
         return playlistRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId())
                 .stream()
-                .map(p -> new PlaylistResponse(p.getId(), p.getName(), p.getIsFusion(), p.getCreatedAt()))
-                .collect(Collectors.toList());
+                .map(PlaylistResponse::fromEntity) 
+                .toList(); 
     }
 
     @Transactional
@@ -77,7 +76,7 @@ public class PlaylistService {
             throw new BusinessException("TRACK_ALREADY_EXISTS", "Esta música já está na playlist.");
         }
 
-        int nextPosition = playlistTrackRepository.countByPlaylistId(playlistId) + 1;
+        int nextPosition = playlistTrackRepository.findMaxPositionByPlaylistId(playlistId) + 1;
 
         PlaylistTrack track = new PlaylistTrack();
         track.setPlaylist(playlist);
