@@ -1,188 +1,144 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { invitationApi } from "../duo/api";
+import { profileApi } from "../profile/api";
+
+const defaultAvatar = "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
 export default function GenerateInvite() {
-  const savedInvite = JSON.parse(localStorage.getItem("pendingInvite"));
-
-  const [targetEmail, setTargetEmail] = useState(savedInvite?.email || "");
-  const [generatedCode, setGeneratedCode] = useState(savedInvite?.code || "");
-  const [viewState, setViewState] = useState(savedInvite ? "waiting" : "form");
-
+  const [targetEmail, setTargetEmail] = useState("");
+  const [generatedCode, setGeneratedCode] = useState("");
+  const [viewState, setViewState] = useState("form");
   const [isLoading, setIsLoading] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+  const [error, setError] = useState("");
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-
+  const [storedUser, setStoredUser] = useState(() => JSON.parse(localStorage.getItem("user") || "{}"));
+  const currentUser = { name: storedUser.name || "Você", avatar: storedUser.profileImageUrl || defaultAvatar };
+  const [partnerUser, setPartnerUser] = useState({ name: "Aguardando...", avatar: defaultAvatar });
   const copyTimeoutRef = useRef(null);
   const navigate = useNavigate();
 
-  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const [currentUser] = useState({
-    name: storedUser.name || "Você",
-    avatar:
-      storedUser.profileImageUrl ||
-      "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
-  });
-
-  const [partnerUser, setPartnerUser] = useState({
-    name: savedInvite?.recipientName || "Aguardando...",
-    avatar:
-      savedInvite?.avatar ||
-      "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
-  });
+  useEffect(() => {
+    let active = true;
+    Promise.all([profileApi(), invitationApi("/pending")]).then(([user, pending]) => {
+      if (!active) return;
+      setStoredUser(user);
+      if (pending && !user.duoId) {
+        setTargetEmail(pending.recipient.email);
+        setGeneratedCode(pending.invitation.code);
+        setPartnerUser({ name: pending.recipient.name, avatar: pending.recipient.profileImageUrl || defaultAvatar });
+        setViewState("waiting");
+      }
+    }).catch((err) => {
+      if (active) setError(err.message);
+    }).finally(() => {
+      if (active) setIsChecking(false);
+    });
+    return () => { active = false; clearTimeout(copyTimeoutRef.current); };
+  }, []);
 
   useEffect(() => {
-    let intervalId;
-
-    if (viewState === "waiting" && generatedCode) {
-      intervalId = setInterval(async () => {
-        try {
-          const token = localStorage.getItem("accessToken");
-
-          const response = await fetch(
-            `/api/v1/duos/invitations/${generatedCode}/status`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              cache: "no-store",
-            },
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-
-            if (data.status === "ACCEPTED") {
-              clearInterval(intervalId);
-              localStorage.removeItem("pendingInvite");
-
-              const currentUserData = JSON.parse(
-                localStorage.getItem("user") || "{}",
-              );
-              currentUserData.duoId = true;
-              localStorage.setItem("user", JSON.stringify(currentUserData));
-              window.dispatchEvent(new Event("profile-updated"));
-
-              setViewState("paired");
-              setTimeout(() => navigate("/"), 3500);
-            } else if (data.status === "EXPIRED") {
-              clearInterval(intervalId);
-              localStorage.removeItem("pendingInvite");
-              alert("Este convite expirou (passaram-se 24 horas).");
-              setViewState("form");
-            }
-          } else {
-            clearInterval(intervalId);
-            localStorage.removeItem("pendingInvite");
-            setViewState("form");
-            setGeneratedCode("");
-          }
-        } catch (error) {
-          console.error("Erro ao checar status do convite:", error);
+    if (viewState !== "waiting" || !generatedCode) return;
+    let active = true;
+    let timer;
+    const poll = async () => {
+      try {
+        const data = await invitationApi(`/${generatedCode}/status`);
+        if (!active) return;
+        setError("");
+        if (data.status === "ACCEPTED") {
+          await profileApi();
+          if (!active) return;
+          setViewState("paired");
+          return;
         }
-      }, 3000);
-    }
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
+        if (data.status === "EXPIRED" || data.status === "REJECTED") {
+          setError(data.status === "EXPIRED"
+            ? "Este convite expirou após 24 horas. Você pode enviar um novo convite."
+            : "Este convite foi cancelado. Você pode enviar um novo convite.");
+          setGeneratedCode("");
+          setViewState("form");
+          return;
+        }
+      } catch (err) {
+        if (!active) return;
+        setError(err.message);
+        if (err.status === 404) {
+          setGeneratedCode("");
+          setViewState("form");
+          return;
+        }
+      }
+      if (active) timer = setTimeout(poll, 3000);
     };
+    timer = setTimeout(poll, 3000);
+    return () => { active = false; clearTimeout(timer); };
   }, [viewState, generatedCode, navigate]);
+
+  useEffect(() => {
+    if (viewState !== "paired") return;
+    const timer = setTimeout(() => navigate("/"), 3500);
+    return () => clearTimeout(timer);
+  }, [viewState, navigate]);
 
   const handleGenerate = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-
+    if (isLoading || isChecking) return;
+    setError("");
     const cleanEmail = targetEmail.trim().toLowerCase();
-
+    if (storedUser.duoId) {
+      setError("Você já possui um Duo e não pode enviar novos convites.");
+      return;
+    }
+    if (cleanEmail === storedUser.email?.trim().toLowerCase()) {
+      setError("Você não pode enviar um convite para seu próprio e-mail.");
+      return;
+    }
+    setIsLoading(true);
     try {
-      const token = localStorage.getItem("accessToken");
-
-      const response = await fetch("/api/v1/duos/invitations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ email: cleanEmail }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || "Não foi possível gerar o convite.",
-        );
-      }
-
-      const data = await response.json();
-
-      localStorage.setItem(
-        "pendingInvite",
-        JSON.stringify({
-          code: data.invitation.code,
-          email: cleanEmail,
-          recipientName: data.recipient.name,
-          avatar: data.recipient.profileImageUrl,
-        }),
-      );
-
+      const data = await invitationApi("", { method: "POST", body: JSON.stringify({ email: cleanEmail }) });
+      setTargetEmail(cleanEmail);
       setGeneratedCode(data.invitation.code);
       setViewState("waiting");
-      setPartnerUser({
-        name: data.recipient.name,
-        avatar:
-          data.recipient.profileImageUrl ||
-          "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
-      });
+      setPartnerUser({ name: data.recipient.name, avatar: data.recipient.profileImageUrl || defaultAvatar });
     } catch (err) {
-      console.error("Erro na integração:", err);
-      alert(err.message);
-    } finally {
-      setIsLoading(false);
-    }
+      setError(err.message);
+      if (err.code === "INVITATION_ALREADY_EXISTS") {
+        try {
+          const pending = await invitationApi("/pending");
+          if (pending) {
+            setTargetEmail(pending.recipient.email);
+            setGeneratedCode(pending.invitation.code);
+            setPartnerUser({ name: pending.recipient.name, avatar: pending.recipient.profileImageUrl || defaultAvatar });
+            setViewState("waiting");
+          }
+        } catch { /* Manter o erro original visível */ }
+      }
+    } finally { setIsLoading(false); }
   };
 
-  const copyCode = () => {
-    navigator.clipboard.writeText(generatedCode);
-    setIsCopied(true);
-
-    if (copyTimeoutRef.current) {
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedCode);
+      setIsCopied(true);
       clearTimeout(copyTimeoutRef.current);
-    }
-
-    copyTimeoutRef.current = setTimeout(() => {
-      setIsCopied(false);
-    }, 2000);
+      copyTimeoutRef.current = setTimeout(() => setIsCopied(false), 2000);
+    } catch { setError("Não foi possível copiar. Selecione e copie o código manualmente."); }
   };
 
   const confirmCancel = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    setError("");
     try {
-      const token = localStorage.getItem("accessToken");
-
-      const response = await fetch(
-        `/api/v1/duos/invitations/${generatedCode}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || "Erro ao tentar cancelar o convite.",
-        );
-      }
-
-      localStorage.removeItem("pendingInvite");
-      setShowCancelModal(false);
+      await invitationApi(`/${generatedCode}`, { method: "DELETE" });
       setViewState("form");
       setTargetEmail("");
       setGeneratedCode("");
-    } catch (err) {
-      console.error("Erro ao cancelar:", err);
-      alert(err.message);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setShowCancelModal(false); setIsLoading(false); }
   };
 
   return (
@@ -220,6 +176,12 @@ export default function GenerateInvite() {
         </div>
       </header>
 
+      {(error || (storedUser.duoId && viewState !== "paired")) && (
+        <p role="alert" className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-xl text-sm">
+          {error || "Você já possui um Duo e não pode enviar novos convites."}
+        </p>
+      )}
+      {isChecking && <p role="status" className="text-gray-400">Verificando seus convites...</p>}
       <section className="flex flex-col items-center py-8">
         {viewState === "form" && (
           <div className="w-full max-w-md text-center animate-fade-in">
@@ -235,7 +197,7 @@ export default function GenerateInvite() {
               />
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isChecking || !!storedUser.duoId}
                 className="w-full py-4 bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-base"
               >
                 {isLoading ? "Gerando..." : "Gerar Link de Convite"}
@@ -308,7 +270,7 @@ export default function GenerateInvite() {
                     <path d="M22.5 6.908V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v.158l9.714 5.978a1.5 1.5 0 001.572 0L22.5 6.908z" />
                   </svg>
                   <p className="text-gray-300 text-sm md:text-base">
-                    Um convite também foi enviado automaticamente para o e-mail{" "}
+                    Compartilhe este código com a pessoa da conta{" "}
                     <strong className="text-white">{targetEmail}</strong>.
                   </p>
                 </div>
@@ -386,6 +348,7 @@ export default function GenerateInvite() {
               </button>
               <button
                 onClick={confirmCancel}
+                disabled={isLoading}
                 className="flex-1 py-3 rounded-xl font-medium bg-red-600/90 hover:bg-red-500 text-white transition-colors cursor-pointer shadow-[0_0_15px_-3px_rgba(220,38,38,0.4)] text-base"
               >
                 Sim, cancelar

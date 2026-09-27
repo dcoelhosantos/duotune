@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Search from "./pages/Search.jsx";
 import { PrivateRoute } from "./routes/PrivateRoute";
+import { InviteRoute } from "./routes/InviteRoute";
 import { PublicRoute } from "./routes/PublicRoute.jsx";
 
 function App() {
@@ -32,8 +33,10 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/buscar" element={<Search />} />
             <Route path="/perfil" element={<Profile />} />
-            <Route path="/convidar" element={<GenerateInvite />} />
-            <Route path="/aceitar/:code?" element={<AcceptInvite />} />
+            <Route element={<InviteRoute />}>
+              <Route path="/convidar" element={<GenerateInvite />} />
+              <Route path="/aceitar/:code?" element={<AcceptInvite />} />
+            </Route>
           </Route>
         </Route>
 

@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useSession } from "../auth/useSession";
 
 export const PrivateRoute = () => {
+  const location = useLocation();
   const [hadSession] = useState(() =>
     Boolean(localStorage.getItem("accessToken")),
   );
@@ -14,7 +15,7 @@ export const PrivateRoute = () => {
     <Navigate
       to="/entrar"
       replace
-      state={{ sessionExpired: hadSession }}
+      state={{ sessionExpired: hadSession, from: location.pathname }}
     />
   );
 };

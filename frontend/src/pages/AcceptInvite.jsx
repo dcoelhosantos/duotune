@@ -1,34 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+
+import { invitationApi } from "../duo/api";
+import { profileApi } from "../profile/api";
 
 const validateFormat = (codeToTest) => {
   const regex = /^DUO-[A-Z0-9]{5}$/;
   return regex.test(codeToTest);
 };
 
-const acceptInvitationApi = async (codeToProcess) => {
-  const token = localStorage.getItem("accessToken");
-  const response = await fetch(
-    `/api/v1/duos/invitations/${codeToProcess}/accept`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || "Link inválido ou expirado.");
-  }
-
-  return await response.json();
-};
+const acceptInvitationApi = (code) => invitationApi(`/${code}/accept`, { method: "POST" });
 
 export default function AcceptInvite() {
   const { code } = useParams();
   const navigate = useNavigate();
+  const urlRequest = useRef(null);
 
   const [inviteCode, setInviteCode] = useState(() => {
     return code && validateFormat(code) ? code : "";
@@ -63,13 +49,16 @@ export default function AcceptInvite() {
   });
 
   useEffect(() => {
-    if (!code || !validateFormat(code)) return;
+    if (!code || !validateFormat(code) || storedUser.duoId) return;
 
     let isMounted = true;
 
     const processUrlCode = async () => {
       try {
-        const data = await acceptInvitationApi(code);
+        if (urlRequest.current?.code !== code) {
+          urlRequest.current = { code, promise: acceptInvitationApi(code) };
+        }
+        const data = await urlRequest.current.promise;
 
         if (!isMounted) return;
 
@@ -105,6 +94,7 @@ export default function AcceptInvite() {
         if (!isMounted) return;
         setIsLoading(false);
         setError(err.message);
+        if (err.code === "RECIPIENT_ALREADY_PAIRED") profileApi().catch(() => {});
         setViewState("form");
       }
     };
@@ -118,7 +108,12 @@ export default function AcceptInvite() {
 
   const handleAccept = async (e) => {
     e.preventDefault();
+    if (isLoading) return;
     setError("");
+    if (storedUser.duoId) {
+      setError("Você já possui um Duo e não pode aceitar outro convite.");
+      return;
+    }
 
     if (!validateFormat(inviteCode)) {
       setError(
@@ -163,6 +158,7 @@ export default function AcceptInvite() {
     } catch (err) {
       setIsLoading(false);
       setError(err.message);
+      if (err.code === "RECIPIENT_ALREADY_PAIRED") profileApi().catch(() => {});
       setViewState("form");
     }
   };
@@ -210,9 +206,9 @@ export default function AcceptInvite() {
               Insira o código que você recebeu do seu parceiro.
             </p>
 
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-xl mb-6 text-sm animate-fade-in">
-                {error}
+            {(error || storedUser.duoId) && (
+              <div role="alert" className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-xl mb-6 text-sm animate-fade-in">
+                {error || "Você já possui um Duo e não pode aceitar outro convite."}
               </div>
             )}
 
@@ -231,10 +227,10 @@ export default function AcceptInvite() {
               />
               <button
                 type="submit"
-                disabled={isLoading || inviteCode.length < 9}
+                disabled={isLoading || !!storedUser.duoId || inviteCode.length < 9}
                 className="w-full py-4 bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-base shadow-[0_0_20px_-5px_rgba(217,70,239,0.4)]"
               >
-                {isLoading ? "Validando conexão..." : "Entrar no Duo"}
+                {isLoading && !storedUser.duoId ? "Validando conexão..." : "Entrar no Duo"}
               </button>
             </form>
           </div>
