@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiChevronDown, FiLogOut, FiSearch, FiUser } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -6,7 +6,21 @@ export default function Topbar() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const dropdownRef = useRef(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+
+    const handleOutsideClick = (event) => {
+      if (!dropdownRef.current?.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handleOutsideClick);
+    return () => document.removeEventListener("pointerdown", handleOutsideClick);
+  }, [isDropdownOpen]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && searchTerm.trim()) {
@@ -60,7 +74,7 @@ export default function Topbar() {
           />
         </div>
 
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
           <div
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center gap-3 bg-gray-900 rounded-full py-1.5 px-4 cursor-pointer hover:bg-gray-800 transition-colors border border-gray-800"
@@ -88,6 +102,7 @@ export default function Topbar() {
             <div className="absolute right-0 mt-1 w-48 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl py-2 z-50 overflow-hidden">
               <Link
                 to="/perfil"
+                onClick={() => setIsDropdownOpen(false)}
                 className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
               >
                 Gerenciar Perfil
@@ -96,6 +111,7 @@ export default function Topbar() {
               {hasDuo ? (
                 <Link
                   to="#"
+                  onClick={() => setIsDropdownOpen(false)}
                   className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
                 >
                   Gerenciar Duo
@@ -104,12 +120,14 @@ export default function Topbar() {
                 <>
                   <Link
                     to="/convidar"
+                    onClick={() => setIsDropdownOpen(false)}
                     className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
                   >
                     Enviar Convite
                   </Link>
                   <Link
                     to="/aceitar"
+                    onClick={() => setIsDropdownOpen(false)}
                     className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
                   >
                     Aceitar Convite
