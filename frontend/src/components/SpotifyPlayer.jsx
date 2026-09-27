@@ -160,7 +160,7 @@ export default function SpotifyPlayer() {
               onBlur={commitVolume}
               aria-label="Volume"
               aria-valuetext={`${volumePercent}%`}
-              className="w-20 sm:w-24 accent-fuchsia-500 cursor-pointer disabled:opacity-40"
+              className="w-20 sm:w-24 accent-fuchsia-500 touch-none cursor-pointer disabled:opacity-40"
             />
             <span className="w-9 text-right text-xs tabular-nums text-gray-400">
               {volumePercent}%

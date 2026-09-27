@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -100,6 +101,19 @@ public class SpotifyOAuthController {
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(Principal principal) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(spotify.token(principal.getName(), true));
+    }
+
+    // Desconecta somente a integração Spotify; a sessão do DuoTune continua ativa.
+    @DeleteMapping("/disconnect")
+    public ResponseEntity<Void> disconnect(Principal principal, HttpServletRequest request) {
+        var session = request.getSession(false);
+        if (session != null) {
+            synchronized (session) {
+                session.removeAttribute("spotifyOAuth");
+            }
+        }
+        spotify.disconnect(principal.getName());
+        return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 
     // Tratamento de exceções para retornar mensagens em português ao frontend.

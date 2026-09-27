@@ -104,6 +104,16 @@ public class SpotifyOAuthService {
         saveTokens(user, tokens);
     }
 
+    // Remove o vínculo sem permitir que uma renovação em andamento restaure os tokens.
+    public synchronized void disconnect(String email) {
+        var user = user(email);
+        user.setSpotifyId(null);
+        user.setSpotifyAccessToken(null);
+        user.setSpotifyRefreshToken(null);
+        user.setSpotifyExpiresAt(null);
+        users.save(user);
+    }
+
     // Retorna o token atual ou renova quando solicitado ou próximo do vencimento.
     public synchronized Map<String, Object> token(String email, boolean force) {
         var user = user(email);

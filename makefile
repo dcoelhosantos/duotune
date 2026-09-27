@@ -3,7 +3,7 @@
 # 👉 http://localhost:8080/swagger-ui/index.html
 #
 # [FRONTEND] Rode 'make start-front'. Acesse a interface do React (Vite):
-# 👉 http://localhost:5173
+# 👉 http://127.0.0.1:5173
 # ==============================================================================
 
 # --- CARREGA VARIÁVEIS DE AMBIENTE ---

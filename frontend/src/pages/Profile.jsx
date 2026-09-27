@@ -15,12 +15,15 @@ export default function Profile() {
   const [name, setName] = useState(user.name || "");
   const [busy, setBusy] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [failedImageUrl, setFailedImageUrl] = useState(null);
   const fileRef = useRef(null);
   const messages = {
     connected: "Conta Spotify conectada!",
+    disconnected: "Conta Spotify desconectada do DuoTune.",
     denied: "Você cancelou a conexão com o Spotify.",
     invalid_state: "A autorização expirou. Tente conectar novamente.",
     error: "Não foi possível concluir a conexão com o Spotify.",
@@ -88,6 +91,19 @@ export default function Profile() {
     }
   }
 
+  async function disconnect() {
+    setDisconnecting(true);
+    setError("");
+    try {
+      await spotifyApi("disconnect", { method: "DELETE" });
+      // Recria a página para encerrar o SDK e descartar eventos pendentes do player.
+      window.location.replace("/perfil?spotify=disconnected");
+    } catch (err) {
+      setError(err.message);
+      setDisconnecting(false);
+    }
+  }
+
   const disabled = busy || !ready;
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-6">
@@ -106,10 +122,12 @@ export default function Profile() {
           <div className="flex flex-wrap items-end gap-5 -mt-12">
             <div className="relative shrink-0">
               <div className="w-28 h-28 rounded-full border-4 border-gray-950 bg-fuchsia-950 flex items-center justify-center overflow-hidden">
-                {user.profileImageUrl ? (
+                {user.profileImageUrl &&
+                user.profileImageUrl !== failedImageUrl ? (
                   <img
                     src={user.profileImageUrl}
                     alt="Sua foto de perfil"
+                    onError={() => setFailedImageUrl(user.profileImageUrl)}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -280,7 +298,7 @@ export default function Profile() {
           )}
           <button
             onClick={connect}
-            disabled={connecting || loading}
+            disabled={connecting || disconnecting || loading}
             className="mt-7 rounded-xl border border-green-500/30 bg-green-500/10 text-green-300 hover:bg-green-500/20 px-5 py-3 font-semibold disabled:opacity-50"
           >
             {connecting
@@ -289,6 +307,16 @@ export default function Profile() {
                 ? "Reconectar com Spotify"
                 : "Conectar com Spotify"}
           </button>
+          {connected && (
+            <button
+              type="button"
+              onClick={disconnect}
+              disabled={connecting || disconnecting || loading}
+              className="mt-3 rounded-xl border border-gray-700 text-gray-300 hover:bg-gray-800 px-5 py-3 font-semibold disabled:opacity-50"
+            >
+              {disconnecting ? "Desconectando..." : "Desconectar do Spotify"}
+            </button>
+          )}
         </section>
       </div>
     </div>

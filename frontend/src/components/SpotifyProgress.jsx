@@ -32,7 +32,7 @@ export default function SpotifyProgress({
         disabled={disabled || duration <= 0}
         aria-label="Posição da música"
         aria-valuetext={`${formatTime(value)} de ${formatTime(duration)}`}
-        className="w-full h-5 cursor-pointer accent-green-500 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-green-400"
+        className="w-full h-5 cursor-pointer accent-green-500 touch-none disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-green-400"
         onChange={(event) => setDraft(Number(event.target.value))}
         onPointerDown={(event) =>
           event.currentTarget.setPointerCapture(event.pointerId)

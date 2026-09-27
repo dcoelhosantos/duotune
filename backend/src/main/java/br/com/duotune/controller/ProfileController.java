@@ -1,13 +1,7 @@
 package br.com.duotune.controller;
 
-import java.awt.RenderingHints;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.Principal;
-import java.util.Base64;
-
-import javax.imageio.ImageIO;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,13 +21,18 @@ import br.com.duotune.dto.UserResponse;
 import br.com.duotune.exception.dto.ErrorResponse;
 import br.com.duotune.model.User;
 import br.com.duotune.repository.UserRepository;
+import br.com.duotune.service.ImageProcessingService;
 
 @RestController
 @RequestMapping("/api/v1/users/me")
 public class ProfileController {
     private final UserRepository users;
+    private final ImageProcessingService images;
 
-    public ProfileController(UserRepository users) { this.users = users; }
+    public ProfileController(UserRepository users, ImageProcessingService images) {
+        this.users = users;
+        this.images = images;
+    }
 
     private User user(Principal principal) {
         return users.findByEmail(principal.getName()).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não encontrado. Entre novamente no DuoTune."));
@@ -72,42 +71,9 @@ public class ProfileController {
     // A imagem é redimensionada para 256x256 pixels e convertida para JPG.
     @PostMapping("/photo")
     public UserResponse photo(Principal principal, @RequestParam("file") MultipartFile file) throws IOException {
-        if (file.isEmpty() || file.getSize() > 2 * 1024 * 1024) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha uma imagem de até 2 MB.");
-        }
-        // Sequência de validações do conteúdo e das dimensões da imagem.
-        // Após validações, decodifica a imagem inteira.
-        try (var input = ImageIO.createImageInputStream(file.getInputStream())) {
-            var readers = ImageIO.getImageReaders(input);
-            if (!readers.hasNext()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use uma imagem JPG ou PNG válida.");
-            var reader = readers.next();
-            try {
-                reader.setInput(input);
-                String format = reader.getFormatName();
-                if (!(format.equalsIgnoreCase("jpeg") || format.equalsIgnoreCase("png")) ||
-                        (long) reader.getWidth(0) * reader.getHeight(0) > 16000000) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use JPG ou PNG de até 16 megapixels.");
-                }
-                var original = reader.read(0);
-                int side = Math.min(original.getWidth(), original.getHeight());
-                var avatar = new BufferedImage(256, 256, BufferedImage.TYPE_INT_RGB);
-                var graphics = avatar.createGraphics();
-                graphics.setColor(java.awt.Color.WHITE);
-                graphics.fillRect(0, 0, 256, 256);
-                graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-                int x = (original.getWidth() - side) / 2;
-                int y = (original.getHeight() - side) / 2;
-                graphics.drawImage(original, 0, 0, 256, 256, x, y, x + side, y + side, null);
-                graphics.dispose();
-                var output = new ByteArrayOutputStream();
-                ImageIO.write(avatar, "jpg", output);
-                var user = user(principal);
-                user.setProfileImageUrl("data:image/jpeg;base64," + Base64.getEncoder().encodeToString(output.toByteArray()));
-                return response(users.save(user));
-            } finally { 
-                reader.dispose(); 
-            }
-        }
+        var user = user(principal);
+        user.setProfileImageUrl(images.createProfileImage(file));
+        return response(users.save(user));
     }
 
     // Deleta a foto do perfil do usuário, removendo a URL da imagem.
