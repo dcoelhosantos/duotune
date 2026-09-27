@@ -181,7 +181,7 @@ public class DuoService {
         userRepository.lockParticipants(List.of(authenticatedUser.getId()));
         entityManager.refresh(invitation, LockModeType.PESSIMISTIC_WRITE);
         validatePending(invitation);
-        invitation.setStatus(InvitationStatus.REJECTED);
+        invitation.setStatus(InvitationStatus.CANCELLED);
         invitationRepository.save(invitation);
     }
 
@@ -198,8 +198,11 @@ public class DuoService {
     }
 
     private void validatePending(Invitation invitation) {
-        if (invitation.getStatus() == InvitationStatus.REJECTED) {
+        if (invitation.getStatus() == InvitationStatus.CANCELLED) {
             throw new BusinessException("INVITATION_CANCELLED", "Este convite foi cancelado. Peça um novo convite ao remetente.");
+        }
+        if (invitation.getStatus() == InvitationStatus.REJECTED) {
+            throw new BusinessException("INVITATION_REJECTED", "Este convite foi recusado e não pode mais ser aceito.");
         }
         if (invitation.getStatus() == InvitationStatus.ACCEPTED) {
             throw new BusinessException("INVITATION_ALREADY_USED", "Este convite já foi aceito.");

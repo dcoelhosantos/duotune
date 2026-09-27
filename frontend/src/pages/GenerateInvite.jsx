@@ -54,10 +54,11 @@ export default function GenerateInvite() {
           setViewState("paired");
           return;
         }
-        if (data.status === "EXPIRED" || data.status === "REJECTED") {
+        if (data.status === "EXPIRED" || data.status === "CANCELLED") {
           setError(data.status === "EXPIRED"
             ? "Este convite expirou após 24 horas. Você pode enviar um novo convite."
             : "Este convite foi cancelado. Você pode enviar um novo convite.");
+          setTargetEmail("");
           setGeneratedCode("");
           setViewState("form");
           return;
