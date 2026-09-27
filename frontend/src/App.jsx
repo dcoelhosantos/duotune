@@ -27,15 +27,13 @@ function App() {
 
         {/* Rotas Privadas */}
         <Route element={<PrivateRoute />}>
-          {/* Telas em tela cheia (Sem Sidebar/Topbar) */}
-          <Route path="/convidar" element={<GenerateInvite />} />
-          <Route path="/aceitar/:code?" element={<AcceptInvite />} />
-
           {/* Telas com o layout padrão do app */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/buscar" element={<Search />} />
             <Route path="/perfil" element={<Profile />} />
+            <Route path="/convidar" element={<GenerateInvite />} />
+            <Route path="/aceitar/:code?" element={<AcceptInvite />} />
           </Route>
         </Route>
 

@@ -93,6 +93,7 @@ export default function AcceptInvite() {
 
         const updatedUser = { ...storedUser, duoId: data.duo.id };
         localStorage.setItem("user", JSON.stringify(updatedUser));
+        window.dispatchEvent(new Event("profile-updated"));
 
         setIsLoading(false);
         setViewState("paired");
@@ -151,6 +152,7 @@ export default function AcceptInvite() {
 
       const updatedUser = { ...storedUser, duoId: data.duo.id };
       localStorage.setItem("user", JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event("profile-updated"));
 
       setIsLoading(false);
       setViewState("paired");
@@ -166,14 +168,13 @@ export default function AcceptInvite() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070118] text-white relative overflow-hidden font-sans">
-      <div className="absolute bottom-0 w-full h-64 bg-gradient-to-t from-purple-900/30 to-transparent blur-3xl pointer-events-none"></div>
-
-      <header className="p-8 relative z-10">
+    <div className="space-y-8">
+      <header>
         <div className="flex flex-col">
           <div className="flex items-center gap-4 mb-1">
             <Link
               to="/"
+              aria-label="Voltar para o início"
               className="text-fuchsia-500 hover:text-fuchsia-400 transition-colors"
             >
               <svg
@@ -201,10 +202,10 @@ export default function AcceptInvite() {
         </div>
       </header>
 
-      <main className="flex flex-col items-center justify-center mt-12 relative z-10">
+      <section className="flex flex-col items-center py-8">
         {viewState === "form" ? (
-          <div className="w-full max-w-md text-center animate-fade-in px-4">
-            <h3 className="text-3xl font-semibold mb-2">Aceitar Convite</h3>
+          <div className="w-full max-w-md text-center animate-fade-in">
+            <h3 className="text-2xl font-semibold mb-2">Aceitar Convite</h3>
             <p className="text-gray-400 text-base mb-8">
               Insira o código que você recebeu do seu parceiro.
             </p>
@@ -226,7 +227,7 @@ export default function AcceptInvite() {
                   setInviteCode(e.target.value.toUpperCase());
                 }}
                 required
-                className="w-full p-4 bg-[#11072b] rounded-xl border border-purple-900/50 focus:border-fuchsia-500 outline-none transition-colors tracking-widest text-center text-xl font-mono shadow-inner"
+                className="w-full p-4 bg-gray-950 rounded-xl border border-gray-800 focus:border-fuchsia-500 outline-none transition-colors tracking-widest text-center text-base font-mono shadow-inner"
               />
               <button
                 type="submit"
@@ -239,9 +240,9 @@ export default function AcceptInvite() {
           </div>
         ) : (
           <div className="w-full max-w-2xl text-center animate-fade-in flex flex-col items-center">
-            <div className="flex items-center justify-center gap-8 mb-8">
+            <div className="flex items-center justify-center gap-4 lg:gap-8 mb-8">
               <div className="flex flex-col items-center">
-                <div className="w-36 h-36 rounded-full border-4 border-fuchsia-500 overflow-hidden bg-gray-800 shadow-[0_0_20px_rgba(217,70,239,0.3)]">
+                <div className="w-24 h-24 lg:w-36 lg:h-36 rounded-full border-4 border-fuchsia-500 overflow-hidden bg-gray-800 shadow-[0_0_20px_rgba(217,70,239,0.3)]">
                   <img
                     src={currentUser.avatar}
                     alt={currentUser.name}
@@ -253,12 +254,12 @@ export default function AcceptInvite() {
                 </span>
               </div>
 
-              <div className="text-7xl -mt-10 text-fuchsia-500 animate-pulse">
+              <div className="text-5xl lg:text-7xl -mt-10 text-fuchsia-500 animate-pulse">
                 ♥
               </div>
 
               <div className="flex flex-col items-center">
-                <div className="w-36 h-36 rounded-full border-4 border-fuchsia-500 shadow-[0_0_20px_rgba(217,70,239,0.3)] overflow-hidden bg-gray-800 flex items-center justify-center">
+                <div className="w-24 h-24 lg:w-36 lg:h-36 rounded-full border-4 border-fuchsia-500 shadow-[0_0_20px_rgba(217,70,239,0.3)] overflow-hidden bg-gray-800 flex items-center justify-center">
                   <img
                     src={partnerUser.avatar}
                     alt={partnerUser.name}
@@ -282,7 +283,7 @@ export default function AcceptInvite() {
             </div>
           </div>
         )}
-      </main>
+      </section>
     </div>
   );
 }

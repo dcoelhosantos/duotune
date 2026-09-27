@@ -60,6 +60,7 @@ export default function GenerateInvite() {
               );
               currentUserData.duoId = true;
               localStorage.setItem("user", JSON.stringify(currentUserData));
+              window.dispatchEvent(new Event("profile-updated"));
 
               setViewState("paired");
               setTimeout(() => navigate("/"), 3500);
@@ -185,14 +186,13 @@ export default function GenerateInvite() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070118] text-white relative overflow-hidden font-sans">
-      <div className="absolute bottom-0 w-full h-64 bg-gradient-to-t from-purple-900/30 to-transparent blur-3xl pointer-events-none"></div>
-
-      <header className="p-8 relative z-10">
+    <div className="space-y-8">
+      <header>
         <div className="flex flex-col">
           <div className="flex items-center gap-4 mb-1">
             <Link
               to="/"
+              aria-label="Voltar para o início"
               className="text-fuchsia-500 hover:text-fuchsia-400 transition-colors"
             >
               <svg
@@ -220,7 +220,7 @@ export default function GenerateInvite() {
         </div>
       </header>
 
-      <main className="flex flex-col items-center justify-center mt-6 relative z-10">
+      <section className="flex flex-col items-center py-8">
         {viewState === "form" && (
           <div className="w-full max-w-md text-center animate-fade-in">
             <h3 className="text-2xl font-semibold mb-6">Enviar convite</h3>
@@ -231,7 +231,7 @@ export default function GenerateInvite() {
                 value={targetEmail}
                 onChange={(e) => setTargetEmail(e.target.value)}
                 required
-                className="w-full p-4 bg-[#11072b] rounded-xl border border-purple-900/50 focus:border-fuchsia-500 outline-none transition-colors text-base"
+                className="w-full p-4 bg-gray-950 rounded-xl border border-gray-800 focus:border-fuchsia-500 outline-none transition-colors text-base"
               />
               <button
                 type="submit"
@@ -246,9 +246,9 @@ export default function GenerateInvite() {
 
         {(viewState === "waiting" || viewState === "paired") && (
           <div className="w-full max-w-2xl text-center animate-fade-in flex flex-col items-center">
-            <div className="flex items-center justify-center gap-8 mb-8">
+            <div className="flex items-center justify-center gap-4 lg:gap-8 mb-8">
               <div className="flex flex-col items-center">
-                <div className="w-36 h-36 rounded-full border-4 border-fuchsia-500 overflow-hidden bg-gray-800 shadow-[0_0_20px_rgba(217,70,239,0.3)]">
+                <div className="w-24 h-24 lg:w-36 lg:h-36 rounded-full border-4 border-fuchsia-500 overflow-hidden bg-gray-800 shadow-[0_0_20px_rgba(217,70,239,0.3)]">
                   <img
                     src={currentUser.avatar}
                     alt={currentUser.name}
@@ -261,14 +261,14 @@ export default function GenerateInvite() {
               </div>
 
               <div
-                className={`text-7xl -mt-10 ${viewState === "waiting" ? "text-fuchsia-500 animate-pulse" : "text-fuchsia-500"}`}
+                className={`text-5xl lg:text-7xl -mt-10 ${viewState === "waiting" ? "text-fuchsia-500 animate-pulse" : "text-fuchsia-500"}`}
               >
                 ♥
               </div>
 
               <div className="flex flex-col items-center">
                 <div
-                  className={`w-36 h-36 rounded-full border-4 overflow-hidden bg-gray-800 flex items-center justify-center transition-colors duration-500 ${viewState === "waiting" ? "border-purple-700" : "border-fuchsia-500 shadow-[0_0_20px_rgba(217,70,239,0.3)]"}`}
+                  className={`w-24 h-24 lg:w-36 lg:h-36 rounded-full border-4 overflow-hidden bg-gray-800 flex items-center justify-center transition-colors duration-500 ${viewState === "waiting" ? "border-purple-700" : "border-fuchsia-500 shadow-[0_0_20px_rgba(217,70,239,0.3)]"}`}
                 >
                   {viewState === "waiting" ? (
                     <span className="text-4xl text-gray-500">?</span>
@@ -297,7 +297,7 @@ export default function GenerateInvite() {
                   para formarmos a dupla.
                 </p>
 
-                <div className="bg-[#11072b] border border-purple-800/60 rounded-xl px-6 py-4 mb-8 max-w-md w-full flex items-center gap-5 text-left">
+                <div className="bg-gray-950 border border-gray-800 rounded-xl px-6 py-4 mb-8 max-w-md w-full flex items-center gap-5 text-left">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
@@ -313,8 +313,8 @@ export default function GenerateInvite() {
                   </p>
                 </div>
 
-                <div className="w-full max-w-lg mb-8">
-                  <div className="bg-[#14082e] p-2 rounded-xl flex items-center justify-between border border-purple-900/50">
+                <div className="w-full max-w-lg mb-2">
+                  <div className="bg-gray-950 p-2 rounded-xl flex items-center justify-between border border-gray-800">
                     <div className="pl-4 py-2 text-left">
                       <span className="text-sm text-purple-400 block mb-1 font-semibold">
                         Código do convite
@@ -341,7 +341,7 @@ export default function GenerateInvite() {
 
                 <button
                   onClick={() => setShowCancelModal(true)}
-                  className="text-base text-purple-400 hover:text-purple-300 transition-colors cursor-pointer"
+                  className="text-base text-red-400 hover:text-red-300 transition-colors cursor-pointer"
                 >
                   Cancelar convite
                 </button>
@@ -359,7 +359,7 @@ export default function GenerateInvite() {
             )}
           </div>
         )}
-      </main>
+      </section>
 
       {showCancelModal && (
         <div
@@ -368,7 +368,7 @@ export default function GenerateInvite() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#170c30] p-8 rounded-2xl border border-purple-900/50 max-w-sm w-full text-center shadow-2xl"
+            className="bg-gray-950 p-8 rounded-2xl border border-gray-800 max-w-sm w-full text-center shadow-2xl"
           >
             <h4 className="text-xl font-bold text-white mb-3">
               Cancelar convite?
