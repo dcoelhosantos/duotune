@@ -1,3 +1,4 @@
+import Profile from "./pages/Profile";
 import {
   Navigate,
   Route,
@@ -34,6 +35,7 @@ function App() {
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/buscar" element={<Search />} />
+            <Route path="/perfil" element={<Profile />} />
           </Route>
         </Route>
 

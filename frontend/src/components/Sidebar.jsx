@@ -16,7 +16,7 @@ export default function Sidebar() {
           <FiHome size={24} /> Início
         </Link>
         <Link
-          to="/search"
+          to="/buscar"
           className="flex items-center gap-4 text-gray-300 hover:text-white transition-colors font-medium"
         >
           <FiSearch size={24} /> Buscar
