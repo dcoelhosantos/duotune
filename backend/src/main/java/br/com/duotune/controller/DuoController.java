@@ -27,6 +27,9 @@ public class DuoController {
 
     @GetMapping("/invitations/pending")
     public ResponseEntity<InvitationResponse> pendingInvitation(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         InvitationResponse invitation = duoService.pendingInvitation(principal.getName());
         return invitation == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(invitation);
     }
@@ -73,6 +76,9 @@ public class DuoController {
 
     @GetMapping("/invitations/{code}/status")
     public ResponseEntity<Map<String, String>> checkInvitationStatus(@PathVariable String code, Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         String status = duoService.checkInvitationStatus(code, principal.getName());
         return ResponseEntity.ok(Map.of("status", status));
     }
