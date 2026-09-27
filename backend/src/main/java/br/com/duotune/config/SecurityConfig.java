@@ -39,7 +39,6 @@ public class SecurityConfig {
                     "/api/v1/auth/register",
                     "/api/v1/auth/login",
                     "/api/spotify/callback",
-                    "/api/v1/duos/**",
                     "/error",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
@@ -47,6 +46,15 @@ public class SecurityConfig {
                 .permitAll()
                 .anyRequest().authenticated()
             )
+            .exceptionHandling(errors -> errors.defaultAuthenticationEntryPointFor(
+                (request, response, exception) -> {
+                    response.setStatus(401);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"code\":\"UNAUTHORIZED\",\"message\":\"Entre na sua conta para acessar os convites.\"}");
+                },
+                request -> request.getServletPath().equals("/api/v1/duos")
+                    || request.getServletPath().startsWith("/api/v1/duos/")
+            ))
             .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

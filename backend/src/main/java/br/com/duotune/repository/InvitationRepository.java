@@ -1,5 +1,6 @@
 package br.com.duotune.repository;
 
+import java.time.OffsetDateTime;
 import br.com.duotune.model.Invitation;
 import br.com.duotune.model.enums.InvitationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,9 +13,8 @@ public interface InvitationRepository extends JpaRepository<Invitation, Long> {
 
     Optional<Invitation> findByCode(String code);
 
-    boolean existsBySenderIdAndRecipientIdAndStatus(
-            Long senderId,
-            Long recipientId,
-            InvitationStatus status
-    );
+    boolean existsBySenderIdAndStatusAndExpiresAtAfter(
+            Long senderId, InvitationStatus status, OffsetDateTime now);
+    Optional<Invitation> findFirstBySenderIdAndStatusAndExpiresAtAfterOrderBySentAtDesc(
+            Long senderId, InvitationStatus status, OffsetDateTime now);
 }

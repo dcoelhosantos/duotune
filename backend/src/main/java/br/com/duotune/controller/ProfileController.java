@@ -1,5 +1,7 @@
 package br.com.duotune.controller;
 
+import br.com.duotune.repository.DuoRepository;
+
 import java.io.IOException;
 import java.security.Principal;
 
@@ -28,10 +30,12 @@ import br.com.duotune.service.ImageProcessingService;
 public class ProfileController {
     private final UserRepository users;
     private final ImageProcessingService images;
+    private final DuoRepository duos;
 
-    public ProfileController(UserRepository users, ImageProcessingService images) {
+    public ProfileController(UserRepository users, ImageProcessingService images, DuoRepository duos) {
         this.users = users;
         this.images = images;
+        this.duos = duos;
     }
 
     private User user(Principal principal) {
@@ -44,7 +48,8 @@ public class ProfileController {
             user.getName(), 
             user.getEmail(), 
             user.getProfileImageUrl(), 
-            user.getCreatedAt()
+            user.getCreatedAt(),
+            duos.findActiveDuoId(user.getId()).orElse(null)
         );
     }
 

@@ -1,5 +1,7 @@
 package br.com.duotune.controller;
 
+import br.com.duotune.repository.DuoRepository;
+
 import java.net.URI;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,9 @@ public class AuthController {
 
     @Autowired 
     private TokenService tokenService;
+
+    @Autowired
+    private DuoRepository duos;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -70,7 +75,7 @@ public class AuthController {
         User user = userOptional.get();
         UserResponse userResponse = new UserResponse(
                 user.getId(), user.getName(), user.getEmail(),
-                user.getProfileImageUrl(), user.getCreatedAt());
+                user.getProfileImageUrl(), user.getCreatedAt(), duos.findActiveDuoId(user.getId()).orElse(null));
 
         String token = tokenService.generateToken(user.getEmail());
         RegisterResponse response = new RegisterResponse(userResponse, token, 7200L);

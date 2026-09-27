@@ -1,5 +1,8 @@
 package br.com.duotune.controller;
 
+import br.com.duotune.exception.BusinessException;
+import br.com.duotune.exception.dto.ErrorResponse;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import br.com.duotune.dto.DuoResponse;
 import br.com.duotune.dto.InvitationRequest;
 import br.com.duotune.dto.InvitationResponse;
@@ -20,6 +23,33 @@ public class DuoController {
 
     public DuoController(DuoService duoService) {
         this.duoService = duoService;
+    }
+
+    @GetMapping("/invitations/pending")
+    public ResponseEntity<InvitationResponse> pendingInvitation(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        InvitationResponse invitation = duoService.pendingInvitation(principal.getName());
+        return invitation == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(invitation);
+    }
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> businessError(BusinessException error) {
+        HttpStatus status = switch (error.getCode()) {
+            case "USER_NOT_FOUND", "INVITATION_NOT_FOUND" -> HttpStatus.NOT_FOUND;
+            case "INVALID_INVITATION", "UNAUTHORIZED_ACTION" -> HttpStatus.FORBIDDEN;
+            case "SELF_INVITATION", "INVALID_OPERATION" -> HttpStatus.BAD_REQUEST;
+            default -> HttpStatus.CONFLICT;
+        };
+        return ResponseEntity.status(status).body(new ErrorResponse(error.getCode(), error.getMessage()));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> invalidRequest(MethodArgumentNotValidException error) {
+        var field = error.getBindingResult().getFieldError();
+        return ResponseEntity.badRequest().body(new ErrorResponse("INVALID_EMAIL",
+                field == null ? "Informe um e-mail válido." : field.getDefaultMessage()));
     }
 
     @PostMapping("/invitations")
@@ -45,8 +75,11 @@ public class DuoController {
     }
 
     @GetMapping("/invitations/{code}/status")
-    public ResponseEntity<Map<String, String>> checkInvitationStatus(@PathVariable String code) {
-        String status = duoService.checkInvitationStatus(code);
+    public ResponseEntity<Map<String, String>> checkInvitationStatus(@PathVariable String code, Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String status = duoService.checkInvitationStatus(code, principal.getName());
         return ResponseEntity.ok(Map.of("status", status));
     }
 
