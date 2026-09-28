@@ -168,7 +168,7 @@ export default function PlaylistDetails() {
                 {playlistMenuOpen && (
                   <div className="absolute left-0 mt-2 w-56 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-2 text-sm text-gray-300">
                     <Link
-                      to="/search"
+                      to="/buscar"
                       state={{ autoFocus: true }}
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left cursor-pointer"
                     >
@@ -210,11 +210,11 @@ export default function PlaylistDetails() {
           <div className="text-center text-gray-400 py-20 space-y-6">
             <p className="text-lg">Esta playlist ainda não tem músicas.</p>
             <Link
-              to="/search"
+              to="/buscar"
               state={{ autoFocus: true }}
-              className="inline-block text-fuchsia-400 hover:text-fuchsia-300 font-semibold"
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left cursor-pointer"
             >
-              Buscar músicas
+              <FiPlus size={18} /> Buscar Músicas
             </Link>
           </div>
         ) : (

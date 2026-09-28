@@ -72,4 +72,10 @@ BEGIN
 END;
 $$;;
 
-ALTER TABLE playlists ADD COLUMN IF NOT EXISTS description VARCHAR(500);
+DO $$
+BEGIN
+    IF to_regclass('playlists') IS NOT NULL THEN
+        ALTER TABLE playlists ADD COLUMN IF NOT EXISTS description VARCHAR(500);
+    END IF;
+END;
+$$;
