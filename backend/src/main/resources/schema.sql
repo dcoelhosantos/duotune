@@ -47,3 +47,29 @@ BEGIN
     END IF;
 END;
 $$;;
+
+DO $$
+BEGIN
+    -- Serializa esta migração
+    PERFORM pg_advisory_xact_lock(20260928, 1);
+    
+    IF NOT EXISTS (
+        SELECT 1 FROM duotune_schema_migrations
+        WHERE version = '20260928_add_metadata_to_playlist_tracks'
+    ) THEN
+        -- Se a tabela já existir (bancos em produção/legados), adiciona as colunas
+        IF to_regclass('playlist_tracks') IS NOT NULL THEN
+            ALTER TABLE playlist_tracks 
+            ADD COLUMN title VARCHAR(255),
+            ADD COLUMN artist VARCHAR(255),
+            ADD COLUMN image_url VARCHAR(512);
+        END IF;
+
+        -- Registra a migração (inclusive em bancos novos)
+        INSERT INTO duotune_schema_migrations(version)
+            VALUES ('20260928_add_metadata_to_playlist_tracks');
+    END IF;
+END;
+$$;;
+
+ALTER TABLE playlists ADD COLUMN IF NOT EXISTS description VARCHAR(500);

@@ -42,7 +42,12 @@ export default function AddToPlaylistModal({ track, onClose }) {
     try {
       await playlistApi(`/${playlistId}/tracks`, {
         method: "POST",
-        body: JSON.stringify({ trackSpotifyId: track.id }),
+        body: JSON.stringify({
+          trackSpotifyId: track.id,
+          title: track.title,
+          artist: track.artist,
+          imageUrl: track.imageUrl || null,
+        }),
       });
       if (!isMounted.current) return;
 
@@ -162,8 +167,8 @@ export default function AddToPlaylistModal({ track, onClose }) {
           onClose={() => setShowCreateModal(false)}
           onSuccess={() => {
             setShowCreateModal(false);
-            setLoading(true); 
-            fetchPlaylistsData(); 
+            setLoading(true);
+            fetchPlaylistsData();
           }}
         />
       )}
