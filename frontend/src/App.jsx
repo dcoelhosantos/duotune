@@ -39,8 +39,8 @@ function App() {
             <Route element={<InviteRoute />}>
               <Route path="/convidar" element={<GenerateInvite />} />
               <Route path="/aceitar/:code?" element={<AcceptInvite />} />
-              <Route path="/playlist/:id" element={<PlaylistDetails />} />
             </Route>
+            <Route path="/playlist/:id" element={<PlaylistDetails />} />
           </Route>
         </Route>
 

@@ -24,6 +24,7 @@ public class Playlist {
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
+    @Column(length = 500)
     private String description;
 
     public String getDescription() {

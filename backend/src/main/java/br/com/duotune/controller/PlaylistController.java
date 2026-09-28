@@ -1,5 +1,6 @@
 package br.com.duotune.controller;
 
+import br.com.duotune.dto.FusionCreateRequest;
 import br.com.duotune.dto.PlaylistDetailsResponse;
 import br.com.duotune.dto.PlaylistRequest;
 import br.com.duotune.dto.PlaylistResponse;
@@ -110,5 +111,20 @@ public class PlaylistController {
 
         playlistService.updatePlaylist(id, principal.getName(), payload.get("name"), payload.get("description"));
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/fusion")
+    public ResponseEntity<PlaylistDetailsResponse> createFusionPlaylist(
+            @RequestBody @Valid FusionCreateRequest request,
+            Principal principal) {
+
+        PlaylistDetailsResponse response = playlistService.createFusionPlaylist(request, principal.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/duo/list")
+    public ResponseEntity<List<PlaylistResponse>> getDuoPlaylists(Principal principal) {
+        List<PlaylistResponse> playlists = playlistService.getDuoPlaylists(principal.getName());
+        return ResponseEntity.ok(playlists);
     }
 }
