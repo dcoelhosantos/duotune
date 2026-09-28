@@ -52,7 +52,7 @@ export default function Search() {
         }
 
         if (!cancelled) setSearchResult({ query, tracks: data, error: "" });
-      // eslint-disable-next-line no-unused-vars
+        // eslint-disable-next-line no-unused-vars
       } catch (err) {
         if (!cancelled)
           setSearchResult({
@@ -126,14 +126,17 @@ export default function Search() {
                   <FiPlus size={20} />
                 </button>
 
-                <span
-                  aria-hidden="true"
+                <button
+                  type="button"
+                  disabled={!deviceId || busy}
+                  onClick={() => playTrack(track)}
+                  title={isCurrent ? "Pausar" : "Reproduzir"}
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                     !deviceId || busy
                       ? "bg-gray-800 text-gray-600 cursor-not-allowed"
                       : isCurrent
-                        ? "bg-fuchsia-500 text-white"
-                        : "bg-gray-700 group-hover:bg-fuchsia-500 text-white"
+                        ? "bg-fuchsia-500 text-white cursor-pointer"
+                        : "bg-gray-700 hover:bg-fuchsia-500 text-white cursor-pointer"
                   }`}
                 >
                   {isCurrent ? (
@@ -141,7 +144,7 @@ export default function Search() {
                   ) : (
                     <FiPlay size={18} className="ml-0.5" />
                   )}
-                </span>
+                </button>
               </div>
             </div>
           );

@@ -9,7 +9,7 @@ export default function CreatePlaylistModal({ onClose, onSuccess }) {
 
   const isMounted = useRef(true);
   useEffect(() => {
-    isMounted.current = true; 
+    isMounted.current = true;
     return () => {
       isMounted.current = false;
     };
@@ -38,7 +38,7 @@ export default function CreatePlaylistModal({ onClose, onSuccess }) {
   return (
     <div
       className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+      onClick={!loading ? onClose : undefined}
     >
       <div
         className="bg-gray-950 border border-gray-800 rounded-2xl p-6 w-full max-w-md"
@@ -46,9 +46,11 @@ export default function CreatePlaylistModal({ onClose, onSuccess }) {
       >
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold">Criar Playlist</h3>
+          {/* Bloqueia o botão X se estiver em loading */}
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white cursor-pointer"
+            disabled={loading}
+            className="text-gray-400 hover:text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FiX size={24} />
           </button>
@@ -70,10 +72,11 @@ export default function CreatePlaylistModal({ onClose, onSuccess }) {
               type="text"
               maxLength={100}
               required
+              disabled={loading}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Rock Clássico"
-              className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 outline-none focus:border-fuchsia-500"
+              className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 outline-none focus:border-fuchsia-500 disabled:opacity-50"
             />
           </div>
           <button
