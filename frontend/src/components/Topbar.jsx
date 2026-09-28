@@ -58,8 +58,8 @@ export default function Topbar() {
 
   return (
     <>
-      <header className="h-20 bg-gray-950 flex items-center justify-between px-8 sticky top-0 z-10">
-        <div className="relative w-96">
+      <header className="h-20 shrink-0 bg-gray-950 flex items-center justify-between gap-3 px-4 md:px-8 sticky top-0 z-10">
+        <div className="relative min-w-0 w-full max-w-96">
           <FiSearch
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
             size={20}
@@ -90,7 +90,7 @@ export default function Topbar() {
                 <FiUser size={18} className="text-white" />
               )}
             </div>
-            <span className="text-sm font-medium text-white select-none">
+            <span className="hidden sm:inline text-sm font-medium text-white select-none">
               {userName}
             </span>
             <FiChevronDown

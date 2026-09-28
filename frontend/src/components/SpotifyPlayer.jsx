@@ -11,8 +11,10 @@ import {
 import SpotifyProgress from "./SpotifyProgress";
 import { Link } from "react-router-dom";
 import { useSpotify } from "../spotify/SpotifyContext";
+import { useRoom } from "../room/RoomContext";
 
 export default function SpotifyPlayer() {
+  const { joined, status: roomStatus, error: roomError, leave } = useRoom();
   const {
     needsAuthorization,
     playerVisible,
@@ -42,13 +44,23 @@ export default function SpotifyPlayer() {
 
   const cover = currentTrack?.album?.images?.[0]?.url;
   const volumePercent = volumeDraft ?? Math.round(volume * 100);
-  if (!playerVisible) return null;
+  if (!playerVisible && !joined && roomStatus !== "error") return null;
   return (
     <footer
       className="shrink-0 border-t border-gray-800 bg-gray-950 relative px-4 sm:px-8 pr-12 sm:pr-16 py-4 shadow-lg"
       aria-label="Player do Spotify"
     >
-      <button
+      {!joined && roomStatus === "error" && <p role="alert" className="mb-3 text-sm text-amber-300">
+        {roomError} <Link to="/sala" className="underline">Abrir sala</Link>
+      </p>}
+      {joined && <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-3 text-xs">
+        <Link to="/sala" className={roomStatus === "connected" ? "text-emerald-300" : "text-amber-300"}>
+          {roomStatus === "connected" ? "● Conectado à sala" : ["connecting", "reconnecting"].includes(roomStatus) ? "● Conectando à sala..." : "● Sala sem conexão — abrir sala"}
+        </Link>
+        <span className="text-gray-400">Reprodução sincronizada em breve</span>
+        <button type="button" onClick={leave} className="cursor-pointer text-red-400 hover:text-red-300 focus-visible:outline focus-visible:outline-red-400">Sair da sala</button>
+      </div>}
+      {!joined && <button
         type="button"
         disabled={busy}
         onClick={closePlayer}
@@ -57,7 +69,7 @@ export default function SpotifyPlayer() {
         className="absolute top-3 right-3 p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-40"
       >
         <FiX size={18} />
-      </button>
+      </button>}
       {error && (
         <p role="alert" className="text-red-300 text-sm mb-3">
           {error}{" "}

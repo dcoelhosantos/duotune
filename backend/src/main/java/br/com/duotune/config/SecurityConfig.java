@@ -51,10 +51,11 @@ public class SecurityConfig {
                 (request, response, exception) -> {
                     response.setStatus(401);
                     response.setContentType("application/json;charset=UTF-8");
-                    response.getWriter().write("{\"code\":\"UNAUTHORIZED\",\"message\":\"Entre na sua conta para acessar os convites.\"}");
+                    response.getWriter().write("{\"code\":\"UNAUTHORIZED\",\"message\":\"Entre na sua conta para continuar.\"}");
                 },
                 request -> request.getServletPath().equals("/api/v1/duos")
                     || request.getServletPath().startsWith("/api/v1/duos/")
+                    || request.getServletPath().startsWith("/api/v1/rooms/")
             ))
             .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
 

@@ -11,6 +11,11 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
+      "/ws": {
+        target: "http://127.0.0.1:8080",
+        ws: true,
+        changeOrigin: false,
+      },
       // Toda requisição que começar com /api será redirecionada para o backend
       "/api": {
         target: "http://127.0.0.1:8080",

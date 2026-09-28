@@ -87,6 +87,11 @@ public class StompAccessInterceptor implements ChannelInterceptor {
         return destination.equals("/topic/duos/" + session.duoId() + "/room");
     }
 
+    public boolean isSessionActive(String sessionId) {
+        SessionAccess session = sessions.get(sessionId);
+        return session != null && session.valid();
+    }
+
     public ChannelInterceptor outbound() {
         return new ChannelInterceptor() {
             @Override
