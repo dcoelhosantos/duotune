@@ -54,8 +54,8 @@ public class PlaylistService {
 
         return playlistRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId())
                 .stream()
-                .map(PlaylistResponse::fromEntity) 
-                .toList(); 
+                .map(PlaylistResponse::fromEntity)
+                .toList();
     }
 
     @Transactional
@@ -85,5 +85,11 @@ public class PlaylistService {
         track.setPosition(nextPosition);
 
         playlistTrackRepository.save(track);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Long> getPlaylistsContainingTrack(String trackSpotifyId, String email) {
+        User user = getAuthenticatedUser(email);
+        return playlistTrackRepository.findPlaylistIdsByUserIdAndTrackId(user.getId(), trackSpotifyId);
     }
 }

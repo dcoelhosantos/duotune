@@ -1,6 +1,9 @@
 package br.com.duotune.repository;
 
 import br.com.duotune.model.PlaylistTrack;
+
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,4 +13,7 @@ public interface PlaylistTrackRepository extends JpaRepository<PlaylistTrack, Lo
 
     @Query("SELECT COALESCE(MAX(pt.position), 0) FROM PlaylistTrack pt WHERE pt.playlist.id = :playlistId")
     int findMaxPositionByPlaylistId(@Param("playlistId") Long playlistId);
+
+    @Query("SELECT pt.playlist.id FROM PlaylistTrack pt WHERE pt.playlist.user.id = :userId AND pt.trackSpotifyId = :trackId")
+    List<Long> findPlaylistIdsByUserIdAndTrackId(@Param("userId") Long userId, @Param("trackId") String trackId);
 }

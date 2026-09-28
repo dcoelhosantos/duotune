@@ -71,4 +71,11 @@ public class PlaylistController {
         return ResponseEntity.badRequest().body(new ErrorResponse("INVALID_DATA",
                 field == null ? "Dados inválidos." : field.getDefaultMessage()));
     }
+
+    @GetMapping("/containing-track/{trackSpotifyId}")
+    public ResponseEntity<List<Long>> getPlaylistsContainingTrack(@PathVariable String trackSpotifyId,
+            Principal principal) {
+        List<Long> playlistIds = playlistService.getPlaylistsContainingTrack(trackSpotifyId, principal.getName());
+        return ResponseEntity.ok(playlistIds);
+    }
 }
