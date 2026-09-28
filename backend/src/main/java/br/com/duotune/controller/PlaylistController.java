@@ -1,5 +1,6 @@
 package br.com.duotune.controller;
 
+import br.com.duotune.dto.PlaylistDetailsResponse;
 import br.com.duotune.dto.PlaylistRequest;
 import br.com.duotune.dto.PlaylistResponse;
 import br.com.duotune.dto.TrackAddRequest;
@@ -77,5 +78,37 @@ public class PlaylistController {
             Principal principal) {
         List<Long> playlistIds = playlistService.getPlaylistsContainingTrack(trackSpotifyId, principal.getName());
         return ResponseEntity.ok(playlistIds);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<PlaylistDetailsResponse> getPlaylistDetails(@PathVariable Long id, Principal principal) {
+        PlaylistDetailsResponse details = playlistService.getPlaylistDetails(id, principal.getName());
+        return ResponseEntity.ok(details);
+    }
+
+    @DeleteMapping("/{id}/tracks/{trackSpotifyId}")
+    public ResponseEntity<Void> removeTrackFromPlaylist(
+            @PathVariable Long id,
+            @PathVariable String trackSpotifyId,
+            Principal principal) {
+
+        playlistService.removeTrackFromPlaylist(id, trackSpotifyId, principal.getName());
+        return ResponseEntity.noContent().build(); // Retorna 204 No Content (padrão para exclusão bem sucedida)
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePlaylist(@PathVariable Long id, Principal principal) {
+        playlistService.deletePlaylist(id, principal.getName());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Void> updatePlaylist(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> payload,
+            Principal principal) {
+
+        playlistService.updatePlaylist(id, principal.getName(), payload.get("name"), payload.get("description"));
+        return ResponseEntity.noContent().build();
     }
 }

@@ -13,6 +13,7 @@ import MusicRoom from "./pages/MusicRoom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Search from "./pages/Search.jsx";
+import PlaylistDetails from "./pages/PlaylistDetails";
 import { PrivateRoute } from "./routes/PrivateRoute";
 import { InviteRoute } from "./routes/InviteRoute";
 import { PublicRoute } from "./routes/PublicRoute.jsx";
@@ -38,6 +39,7 @@ function App() {
             <Route element={<InviteRoute />}>
               <Route path="/convidar" element={<GenerateInvite />} />
               <Route path="/aceitar/:code?" element={<AcceptInvite />} />
+              <Route path="/playlist/:id" element={<PlaylistDetails />} />
             </Route>
           </Route>
         </Route>

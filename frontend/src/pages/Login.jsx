@@ -53,7 +53,6 @@ export default function Login() {
 
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("user", JSON.stringify(data.user));
-      // Inicia a sessão com um SDK novo, sem reaproveitar o dispositivo do login anterior.
       const destination = location.state?.from;
       window.location.replace(destination?.startsWith("/aceitar/") ? destination : "/");
       // eslint-disable-next-line no-unused-vars

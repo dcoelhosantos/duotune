@@ -30,6 +30,39 @@ public class PlaylistTrack {
     @Column(name = "added_at", nullable = false)
     private OffsetDateTime addedAt = OffsetDateTime.now();
 
+    @Column(name = "title")
+    private String title;
+
+    @Column(name = "artist")
+    private String artist;
+
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setArtist(String artist) {
+        this.artist = artist;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getArtist() {
+        return artist;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
     public PlaylistTrack() {
     }
 

@@ -3,6 +3,7 @@ package br.com.duotune.repository;
 import br.com.duotune.model.PlaylistTrack;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,4 +17,8 @@ public interface PlaylistTrackRepository extends JpaRepository<PlaylistTrack, Lo
 
     @Query("SELECT pt.playlist.id FROM PlaylistTrack pt WHERE pt.playlist.user.id = :userId AND pt.trackSpotifyId = :trackId")
     List<Long> findPlaylistIdsByUserIdAndTrackId(@Param("userId") Long userId, @Param("trackId") String trackId);
+
+    List<PlaylistTrack> findAllByPlaylistIdOrderByPositionAsc(Long playlistId);
+
+    Optional<PlaylistTrack> findByPlaylistIdAndTrackSpotifyId(Long playlistId, String trackSpotifyId);
 }

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { FiPlay, FiUserPlus, FiPlus, FiMusic } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { playlistApi } from "../playlists/api";
 import CreatePlaylistModal from "../components/CreatePlaylistModal";
 
 export default function Home() {
+  const navigate = useNavigate();
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const hasDuo = !!storedUser.duoId;
 
@@ -135,6 +136,7 @@ export default function Home() {
             {apiPlaylists.map((pl) => (
               <div
                 key={pl.id}
+                onClick={() => navigate(`/playlist/${pl.id}`)}
                 className="bg-gray-950 p-4 rounded-xl hover:bg-gray-800 transition-colors cursor-pointer group select-none border border-transparent hover:border-gray-800"
               >
                 <div className="w-full aspect-square bg-gray-800/50 rounded-md mb-4 shadow-lg overflow-hidden relative flex items-center justify-center">
