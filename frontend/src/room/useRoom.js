@@ -184,6 +184,34 @@ export function useRoomConnection() {
     };
   }, [wanted, attempt]);
 
+  // Consultar presença não assina o canal nem coloca este usuário na sala.
+  useEffect(() => {
+    if (wanted || !info?.duoId || status === "unpaired") return;
+    let active = true;
+    let pending = false;
+    const abort = new AbortController();
+    async function checkPresence() {
+      if (pending || document.visibilityState === "hidden") return;
+      pending = true;
+      try {
+        const current = await roomApi("", { signal: abort.signal });
+        if (active) setSnapshot(current.state);
+      } catch (err) {
+        // Não anunciar presença antiga quando não foi possível verificá-la.
+        if (active && err.name !== "AbortError") setSnapshot(null);
+      } finally { pending = false; }
+    }
+    void checkPresence();
+    const timer = setInterval(checkPresence, 10000);
+    document.addEventListener("visibilitychange", checkPresence);
+    return () => {
+      active = false;
+      abort.abort();
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", checkPresence);
+    };
+  }, [wanted, info?.duoId, status]);
+
   function join() { endedRef.current = false; setError(""); setStatus("connecting"); setWanted(true); setAttempt((value) => value + 1); }
   function leave() { endedRef.current = false; setError(""); setStatus("idle"); setWanted(false); }
   async function send(text, clientId) {

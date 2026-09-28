@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiArrowRight, FiCheck, FiHeadphones, FiHeart, FiList, FiLock, FiLogOut, FiMessageCircle, FiMusic, FiPlus, FiRefreshCw, FiSend, FiUsers, FiWifi } from "react-icons/fi";
+import { FiArrowRight, FiCheck, FiHeadphones, FiList, FiLock, FiLogOut, FiMessageCircle, FiMusic, FiPlus, FiRefreshCw, FiSend, FiUsers, FiWifi } from "react-icons/fi";
 import { useRoom } from "../room/RoomContext";
 
 const labels = { loading: "Preparando sua sala", idle: "Você está fora da sala", connecting: "Conectando...", connected: "Conectado à sala", reconnecting: "Reconectando...", error: "Sem conexão", unpaired: "Duo não formado" };
@@ -27,7 +27,7 @@ export default function MusicRoom() {
   const active = status === "connected";
   const connecting = ["loading", "connecting", "reconnecting"].includes(status);
   const messages = snapshot?.messages;
-  const onlineIds = active ? snapshot?.onlineUserIds || [] : [];
+  const onlineIds = snapshot?.onlineUserIds || [];
   const onlineCount = onlineIds.length;
 
   useEffect(() => {
@@ -86,11 +86,10 @@ export default function MusicRoom() {
             {info?.members.map((member) => <div key={member.id} className="flex min-w-0 items-center gap-3">
               <Avatar member={member} online={onlineIds.includes(member.id)} />
               <div><p className="max-w-40 truncate text-sm font-semibold">{member.id === info.currentUserId ? `${member.name.split(" ")[0]} (você)` : member.name.split(" ")[0]}</p>
-                <p className={`mt-0.5 text-xs ${onlineIds.includes(member.id) ? "text-emerald-400" : "text-gray-500"}`}>{onlineIds.includes(member.id) ? "Na sala" : active ? "Fora da sala" : "Presença ao conectar"}</p></div>
+                <p className={`mt-0.5 text-xs ${onlineIds.includes(member.id) ? "text-emerald-400" : "text-gray-500"}`}>{onlineIds.includes(member.id) ? "Na sala" : snapshot ? "Fora da sala" : "Presença indisponível"}</p></div>
             </div>)}
             {!info && <p className="text-sm text-gray-400">Carregando seu Duo...</p>}
           </div>
-          <FiHeart className="text-fuchsia-400/70" size={20} aria-hidden="true" />
         </section>
 
         <section className="relative overflow-hidden rounded-3xl border border-fuchsia-500/15 bg-gradient-to-br from-purple-950 via-gray-950 to-gray-950 px-6 pb-8 pt-6 text-center">
