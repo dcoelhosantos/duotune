@@ -29,7 +29,7 @@ public class StompAccessInterceptor implements ChannelInterceptor {
     private final DuoRepository duos;
     private final Map<String, SessionAccess> sessions = new ConcurrentHashMap<>();
 
-    private record SessionAccess(Long userId, Instant expiresAt) {
+    private record SessionAccess(Long userId, Long duoId, Instant expiresAt) {
         boolean valid() { return expiresAt != null && Instant.now().isBefore(expiresAt); }
     }
 
@@ -59,7 +59,8 @@ public class StompAccessInterceptor implements ChannelInterceptor {
             }
             var user = users.findByEmail(email)
                     .orElseThrow(() -> new AccessDeniedException("Usuário não encontrado."));
-            var session = new SessionAccess(user.getId(), JWT.decode(token).getExpiresAtAsInstant());
+            Long activeDuoId = duos.findActiveDuoId(user.getId()).orElse(null);
+            var session = new SessionAccess(user.getId(), activeDuoId, JWT.decode(token).getExpiresAtAsInstant());
             if (!session.valid()) throw new AccessDeniedException("Sessão expirada ou inválida.");
             headers.setUser(new UsernamePasswordAuthenticationToken(email, null, List.of()));
             sessions.put(sessionId, session);
@@ -82,10 +83,8 @@ public class StompAccessInterceptor implements ChannelInterceptor {
     }
 
     private boolean canReceive(SessionAccess session, String destination) {
-        if (!session.valid() || destination == null) return false;
-        return duos.findActiveDuoId(session.userId())
-                .map(id -> destination.equals("/topic/duos/" + id + "/room"))
-                .orElse(false);
+        if (!session.valid() || destination == null || session.duoId() == null) return false;
+        return destination.equals("/topic/duos/" + session.duoId() + "/room");
     }
 
     public ChannelInterceptor outbound() {
