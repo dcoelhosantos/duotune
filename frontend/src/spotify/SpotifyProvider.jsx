@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { SpotifyContext } from "./SpotifyContext";
 import { loadSpotifySdk, spotifyApi } from "./api";
 
+function spotifyErrorMessage(error) {
+  return /^session closed\.?$/i.test(error?.message?.trim() || "")
+    ? "A conexão do player com o Spotify foi encerrada. Recarregue o player para ouvir novamente."
+    : error.message;
+}
+
 export default function SpotifyProvider({ children }) {
   const [needsAuthorization, setNeedsAuthorization] = useState(false);
   const [playerVisible, setPlayerVisible] = useState(true);
@@ -37,7 +43,7 @@ export default function SpotifyProvider({ children }) {
               })
               .catch((err) => {
                 if (!disposed) {
-                  setError(err.message);
+                  setError(spotifyErrorMessage(err));
                   setNeedsAuthorization(err.status === 409);
                 }
               });
@@ -95,7 +101,7 @@ export default function SpotifyProvider({ children }) {
           setError("Não foi possível conectar o player. Tente novamente.");
       } catch (err) {
         if (!disposed) {
-          setError(err.message);
+          setError(spotifyErrorMessage(err));
           setNeedsAuthorization(err.status === 409);
         }
       } finally {
@@ -260,7 +266,11 @@ export default function SpotifyProvider({ children }) {
         );
       }
     } catch (err) {
-      setError(err.message);
+      if (/^session closed\.?$/i.test(err?.message?.trim() || "")) {
+        setDeviceId(null);
+        setState(null);
+      }
+      setError(spotifyErrorMessage(err));
       setNeedsAuthorization(err.status === 409);
     } finally {
       commandRef.current = false;

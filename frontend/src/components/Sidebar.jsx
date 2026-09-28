@@ -1,31 +1,34 @@
-import { FiHome, FiMusic, FiHeart, FiSearch, FiUsers } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { FiHome, FiMusic, FiHeart, FiSearch, FiUsers, FiHeadphones } from "react-icons/fi";
+import { Link, NavLink } from "react-router-dom";
 
 export default function Sidebar() {
   return (
-    <aside className="w-64 bg-gray-950 border-r border-gray-900 flex flex-col h-full p-6">
-      <div className="text-3xl font-bold text-white mb-10">
-        Duo<span className="text-fuchsia-500">Tune</span>
+    <aside className="w-16 shrink-0 bg-gray-950 border-r border-gray-900 flex flex-col h-full p-3 md:w-64 md:p-6">
+      <div className="text-xl md:text-3xl font-bold text-white mb-10">
+        <span className="md:hidden" aria-label="DuoTune">D<span className="text-fuchsia-500">.</span></span><span className="hidden md:inline">Duo<span className="text-fuchsia-500">Tune</span></span>
       </div>
 
       <nav className="space-y-4 flex-1">
+        <NavLink to="/sala" className={({ isActive }) => `flex items-center gap-4 rounded-xl px-3 py-3 -mx-3 font-medium transition-colors ${isActive ? "bg-fuchsia-500/10 text-fuchsia-300" : "text-gray-300 hover:bg-gray-900 hover:text-white"}`}>
+          <FiHeadphones size={24} className="shrink-0" /> <span className="sr-only md:not-sr-only">Sala musical</span>
+        </NavLink>
         <Link
           to="/"
           className="flex items-center gap-4 text-gray-300 hover:text-white transition-colors font-medium"
         >
-          <FiHome size={24} /> Início
+          <FiHome size={24} className="shrink-0" /> <span className="sr-only md:not-sr-only">Início</span>
         </Link>
         <Link
           to="/buscar"
           className="flex items-center gap-4 text-gray-300 hover:text-white transition-colors font-medium"
         >
-          <FiSearch size={24} /> Buscar
+          <FiSearch size={24} className="shrink-0" /> <span className="sr-only md:not-sr-only">Buscar</span>
         </Link>
         <Link
           to="/"
           className="flex items-center gap-4 text-gray-300 hover:text-white transition-colors font-medium"
         >
-          <FiMusic size={24} /> Sua Biblioteca
+          <FiMusic size={24} className="shrink-0" /> <span className="sr-only md:not-sr-only">Sua Biblioteca</span>
         </Link>
       </nav>
 
@@ -34,13 +37,13 @@ export default function Sidebar() {
           to="#"
           className="flex items-center gap-4 text-gray-300 hover:text-white transition-colors text-sm"
         >
-          <FiHeart size={20} /> Músicas Curtidas
+          <FiHeart size={20} className="shrink-0" /> <span className="sr-only md:not-sr-only">Músicas Curtidas</span>
         </Link>
         <Link
           to="#"
           className="flex items-center gap-4 text-gray-300 hover:text-white transition-colors text-sm"
         >
-          <FiUsers size={20} /> Match Musical
+          <FiUsers size={20} className="shrink-0" /> <span className="sr-only md:not-sr-only">Match Musical</span>
         </Link>
       </div>
     </aside>
