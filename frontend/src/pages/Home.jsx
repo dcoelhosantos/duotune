@@ -1,15 +1,38 @@
 import { useEffect, useState } from "react";
 import { FiPlay, FiUserPlus, FiPlus, FiMusic } from "react-icons/fi";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { playlistApi } from "../playlists/api";
 import CreatePlaylistModal from "../components/CreatePlaylistModal";
 
+const PlaylistCard = ({ pl }) => (
+  <Link
+    to={`/playlist/${pl.id}`}
+    className="bg-gray-950 p-4 rounded-xl hover:bg-gray-800 transition-colors cursor-pointer group select-none border border-transparent hover:border-gray-800 block"
+  >
+    <div className="w-full aspect-square bg-gray-800/50 rounded-md mb-4 shadow-lg overflow-hidden relative flex items-center justify-center">
+      <FiMusic
+        size={40}
+        className="text-gray-600 group-hover:text-fuchsia-500 transition-colors"
+      />
+      <button className="absolute bottom-2 right-2 w-10 h-10 bg-fuchsia-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-105 shadow-md cursor-pointer">
+        <FiPlay size={20} className="text-white fill-white ml-1" />
+      </button>
+    </div>
+    <h3 className="font-semibold truncate" title={pl.name}>
+      {pl.name}
+    </h3>
+    <p className="text-sm text-gray-400 truncate mt-1">
+      Criada em {new Date(pl.createdAt).toLocaleDateString("pt-BR")}
+    </p>
+  </Link>
+);
+
 export default function Home() {
-  const navigate = useNavigate();
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const hasDuo = !!storedUser.duoId;
 
   const [apiPlaylists, setApiPlaylists] = useState([]);
+  const [duoPlaylists, setDuoPlaylists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -40,7 +63,7 @@ export default function Home() {
   const fetchPlaylistsManually = async () => {
     setLoading(true);
     try {
-      const data = await playlistApi();
+      const data = await playlistApi("");
       setApiPlaylists(data);
     } catch (err) {
       setError(err.message);
@@ -51,9 +74,16 @@ export default function Home() {
 
   useEffect(() => {
     let active = true;
-    playlistApi()
-      .then((data) => {
-        if (active) setApiPlaylists(data);
+
+    Promise.all([
+      playlistApi(""),
+      hasDuo ? playlistApi("/duo/list").catch(() => []) : Promise.resolve([]),
+    ])
+      .then(([myData, duoData]) => {
+        if (active) {
+          setApiPlaylists(myData);
+          setDuoPlaylists(duoData);
+        }
       })
       .catch((err) => {
         if (active) setError(err.message);
@@ -65,10 +95,10 @@ export default function Home() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [hasDuo]);
 
   return (
-    <div className="space-y-8 relative">
+    <div className="space-y-8 relative pb-20">
       {!hasDuo && (
         <div className="bg-gradient-to-r from-fuchsia-700 to-purple-900 rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between shadow-lg border border-fuchsia-500/30">
           <div>
@@ -134,27 +164,34 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-6">
             {apiPlaylists.map((pl) => (
-              <div
-                key={pl.id}
-                onClick={() => navigate(`/playlist/${pl.id}`)}
-                className="bg-gray-950 p-4 rounded-xl hover:bg-gray-800 transition-colors cursor-pointer group select-none border border-transparent hover:border-gray-800"
-              >
-                <div className="w-full aspect-square bg-gray-800/50 rounded-md mb-4 shadow-lg overflow-hidden relative flex items-center justify-center">
-                  <FiMusic
-                    size={40}
-                    className="text-gray-600 group-hover:text-fuchsia-500 transition-colors"
-                  />
-                  <button className="absolute bottom-2 right-2 w-10 h-10 bg-fuchsia-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-105 shadow-md cursor-pointer">
-                    <FiPlay size={20} className="text-white fill-white ml-1" />
-                  </button>
-                </div>
-                <h3 className="font-semibold truncate" title={pl.name}>
-                  {pl.name}
-                </h3>
-                <p className="text-sm text-gray-400 truncate mt-1">
-                  Criada em {new Date(pl.createdAt).toLocaleDateString("pt-BR")}
-                </p>
-              </div>
+              <PlaylistCard key={pl.id} pl={pl} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="pt-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <h2 className="text-2xl font-bold hover:underline cursor-pointer">
+            Playlists do Duo
+          </h2>
+        </div>
+
+        {loading ? (
+          <p className="text-gray-400">Carregando espaço compartilhado...</p>
+        ) : !hasDuo ? (
+          <div className="text-gray-500 text-sm bg-gray-900/50 p-6 rounded-xl border border-gray-800 border-dashed">
+            Você ainda não formou um Duo. Convide sua dupla para visualizar as
+            playlists aqui!
+          </div>
+        ) : duoPlaylists.length === 0 ? (
+          <div className="text-gray-500 text-sm bg-gray-900/50 p-6 rounded-xl border border-gray-800 border-dashed">
+            Seu Duo ainda não criou nenhuma playlist.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            {duoPlaylists.map((pl) => (
+              <PlaylistCard key={`duo-${pl.id}`} pl={pl} />
             ))}
           </div>
         )}

@@ -111,8 +111,27 @@ public class PlaylistService {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new BusinessException("PLAYLIST_NOT_FOUND", "Playlist não encontrada."));
 
-        // Validação de segurança: apenas o dono pode ver a playlist
-        if (!playlist.getUser().getId().equals(user.getId())) {
+        // Validação de segurança: apenas o dono ou o parceiro de Duo podem ver a
+        // playlist
+        boolean isOwner = playlist.getUser().getId().equals(user.getId());
+        boolean isDuo = false;
+
+        if (!isOwner) {
+            Optional<Duo> activeDuoOpt = duoRepository.findActiveDuoByUserId(user.getId());
+
+            if (activeDuoOpt.isPresent()) {
+                Duo activeDuo = activeDuoOpt.get();
+                Long partnerId = activeDuo.getUser1().getId().equals(user.getId())
+                        ? activeDuo.getUser2().getId()
+                        : activeDuo.getUser1().getId();
+
+                if (playlist.getUser().getId().equals(partnerId)) {
+                    isDuo = true;
+                }
+            }
+        }
+
+        if (!isOwner && !isDuo) {
             throw new BusinessException("UNAUTHORIZED_ACTION", "Você não tem permissão para acessar esta playlist.");
         }
 
