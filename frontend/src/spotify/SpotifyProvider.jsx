@@ -25,10 +25,17 @@ export default function SpotifyProvider({ children }) {
   const deviceRef = useRef(null);
   const commandRef = useRef(false);
   const roomModeRef = useRef(false);
+  const roomNoticeTimerRef = useRef(null);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const setRoomMode = useCallback((enabled) => {
     roomModeRef.current = enabled;
-    if (!enabled) setRoomNotice(false);
+    if (!enabled) {
+      clearTimeout(roomNoticeTimerRef.current);
+      setRoomNotice(false);
+    }
+  }, []);
+  useEffect(() => {
+    return () => clearTimeout(roomNoticeTimerRef.current);
   }, []);
   const enableRoomAudio = useCallback(async () => {
     if (!playerRef.current || !deviceRef.current)
@@ -269,7 +276,9 @@ export default function SpotifyProvider({ children }) {
 
   async function playTrack(track) {
     if (roomModeRef.current) {
+      clearTimeout(roomNoticeTimerRef.current);
       setRoomNotice(true);
+      roomNoticeTimerRef.current = setTimeout(() => setRoomNotice(false), 10000);
       return;
     }
     setPlayerVisible(true);

@@ -138,7 +138,7 @@ export default function MusicRoom() {
             Seu espaço a dois
           </p>
           <h1 className="text-3xl font-bold tracking-tight">
-            Sala musical<span className="text-fuchsia-500">.</span>
+            Sala Musical
           </h1>
           <p className="mt-2 text-sm text-gray-400">
             A conversa de vocês também faz parte da trilha sonora.
