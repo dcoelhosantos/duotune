@@ -1,16 +1,38 @@
 import { useEffect, useState } from "react";
 import { FiPlay, FiUserPlus, FiPlus, FiMusic } from "react-icons/fi";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { playlistApi } from "../playlists/api";
 import CreatePlaylistModal from "../components/CreatePlaylistModal";
 
+const PlaylistCard = ({ pl }) => (
+  <Link
+    to={`/playlist/${pl.id}`}
+    className="bg-gray-950 p-4 rounded-xl hover:bg-gray-800 transition-colors cursor-pointer group select-none border border-transparent hover:border-gray-800 block"
+  >
+    <div className="w-full aspect-square bg-gray-800/50 rounded-md mb-4 shadow-lg overflow-hidden relative flex items-center justify-center">
+      <FiMusic
+        size={40}
+        className="text-gray-600 group-hover:text-fuchsia-500 transition-colors"
+      />
+      <button className="absolute bottom-2 right-2 w-10 h-10 bg-fuchsia-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-105 shadow-md cursor-pointer">
+        <FiPlay size={20} className="text-white fill-white ml-1" />
+      </button>
+    </div>
+    <h3 className="font-semibold truncate" title={pl.name}>
+      {pl.name}
+    </h3>
+    <p className="text-sm text-gray-400 truncate mt-1">
+      Criada em {new Date(pl.createdAt).toLocaleDateString("pt-BR")}
+    </p>
+  </Link>
+);
+
 export default function Home() {
-  const navigate = useNavigate();
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const hasDuo = !!storedUser.duoId;
 
   const [apiPlaylists, setApiPlaylists] = useState([]);
-  const [duoPlaylists, setDuoPlaylists] = useState([]); // Novo estado para as playlists do Duo
+  const [duoPlaylists, setDuoPlaylists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -74,29 +96,6 @@ export default function Home() {
       active = false;
     };
   }, [hasDuo]);
-
-  const PlaylistCard = ({ pl }) => (
-    <div
-      onClick={() => navigate(`/playlist/${pl.id}`)}
-      className="bg-gray-950 p-4 rounded-xl hover:bg-gray-800 transition-colors cursor-pointer group select-none border border-transparent hover:border-gray-800"
-    >
-      <div className="w-full aspect-square bg-gray-800/50 rounded-md mb-4 shadow-lg overflow-hidden relative flex items-center justify-center">
-        <FiMusic
-          size={40}
-          className="text-gray-600 group-hover:text-fuchsia-500 transition-colors"
-        />
-        <button className="absolute bottom-2 right-2 w-10 h-10 bg-fuchsia-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-105 shadow-md cursor-pointer">
-          <FiPlay size={20} className="text-white fill-white ml-1" />
-        </button>
-      </div>
-      <h3 className="font-semibold truncate" title={pl.name}>
-        {pl.name}
-      </h3>
-      <p className="text-sm text-gray-400 truncate mt-1">
-        Criada em {new Date(pl.createdAt).toLocaleDateString("pt-BR")}
-      </p>
-    </div>
-  );
 
   return (
     <div className="space-y-8 relative pb-20">
@@ -171,7 +170,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* NOVA SEÇÃO: PLAYLISTS DO DUO */}
       <div className="pt-8">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <h2 className="text-2xl font-bold hover:underline cursor-pointer">
