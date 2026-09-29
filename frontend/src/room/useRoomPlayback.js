@@ -186,6 +186,7 @@ export function useRoomPlayback(room) {
       await enableRoomAudio();
       setEnabled(true);
     } catch (error) {
+      setEnabled(false);
       setPlaybackError(error.message);
     }
   }
@@ -251,7 +252,7 @@ export function useRoomPlayback(room) {
 
   return {
     join,
-    needsAudioAction: audioBlocked || (!enabled && !!playbackError),
+    needsAudioAction: joined && (audioBlocked || !enabled),
     leave,
     track,
     position,
