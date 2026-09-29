@@ -17,6 +17,7 @@ export default function SpotifyProvider({ children }) {
   const [deviceId, setDeviceId] = useState(null);
   const [state, setState] = useState(null);
   const [error, setError] = useState("");
+  const [roomNotice, setRoomNotice] = useState(false);
   const [busy, setBusy] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const previousVolumeRef = useRef(0.5);
@@ -27,6 +28,7 @@ export default function SpotifyProvider({ children }) {
   const [audioBlocked, setAudioBlocked] = useState(false);
   const setRoomMode = useCallback((enabled) => {
     roomModeRef.current = enabled;
+    if (!enabled) setRoomNotice(false);
   }, []);
   const enableRoomAudio = useCallback(async () => {
     if (!playerRef.current || !deviceRef.current)
@@ -267,9 +269,7 @@ export default function SpotifyProvider({ children }) {
 
   async function playTrack(track) {
     if (roomModeRef.current) {
-      setError(
-        "Você está na sala musical. Adicione músicas à fila e use o player compartilhado.",
-      );
+      setRoomNotice(true);
       return;
     }
     setPlayerVisible(true);
@@ -338,6 +338,7 @@ export default function SpotifyProvider({ children }) {
         syncRoomAudio,
         pauseRoomAudio,
         audioBlocked,
+        roomNotice,
         needsAuthorization,
         playerVisible,
         closePlayer,

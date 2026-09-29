@@ -31,6 +31,7 @@ export default function SpotifyPlayer() {
     control,
   } = useRoom();
   const {
+    roomNotice,
     needsAuthorization,
     playerVisible,
     closePlayer,
@@ -140,6 +141,19 @@ export default function SpotifyPlayer() {
       {joined && playbackError && (
         <p role="alert" className="mb-3 text-sm text-red-300">
           {playbackError}
+        </p>
+      )}
+      {joined && roomNotice && (
+        <p role="status" className="mb-3 text-sm text-amber-200">
+          Você está na sala musical. Adicione músicas à fila ou saia da sala
+          para ouvir individualmente.{" "}
+          <button
+            type="button"
+            onClick={leave}
+            className="cursor-pointer text-red-400 underline hover:text-red-300"
+          >
+            Sair da sala
+          </button>
         </p>
       )}
       {error && (
