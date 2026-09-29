@@ -21,7 +21,7 @@ import br.com.duotune.repository.UserRepository;
 
 @Service
 public class SpotifyOAuthService {
-    public static final String SCOPES = "streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state";
+    public static final String SCOPES = "streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state user-read-recently-played";
     private final UserRepository users;
     private final RestTemplate http;
     private final String clientId;

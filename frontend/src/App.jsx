@@ -9,6 +9,7 @@ import MainLayout from "./components/MainLayout";
 import AcceptInvite from "./pages/AcceptInvite.jsx";
 import GenerateInvite from "./pages/GenerateInvite.jsx";
 import Home from "./pages/Home";
+import MusicalMatch from "./pages/MusicalMatch";
 import MusicRoom from "./pages/MusicRoom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -34,6 +35,7 @@ function App() {
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/sala" element={<MusicRoom />} />
+            <Route path="/match" element={<MusicalMatch />} />
             <Route path="/buscar" element={<Search />} />
             <Route path="/perfil" element={<Profile />} />
             <Route element={<InviteRoute />}>

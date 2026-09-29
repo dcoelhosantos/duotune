@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   FiX,
   FiSkipForward,
+  FiSkipBack,
   FiMusic,
   FiPause,
   FiPlay,
@@ -43,6 +44,10 @@ export default function SpotifyPlayer() {
     error,
     busy,
     playTrack,
+    nextTrack,
+    previousTrack,
+    canGoNext,
+    canGoPrevious,
     seekTo,
     position: personalPosition,
     duration: personalDuration,
@@ -75,7 +80,7 @@ export default function SpotifyPlayer() {
   const duration = joined ? track?.durationMs || 0 : personalDuration;
   const cover = currentTrack?.album?.images?.[0]?.url;
   const volumePercent = volumeDraft ?? Math.round(volume * 100);
-  if (!playerVisible && !joined && roomStatus !== "error") return null;
+  if (!playerVisible && !joined) return null;
   return (
     <footer
       className="shrink-0 border-t border-gray-800 bg-gray-950 relative px-4 sm:px-8 pr-12 sm:pr-16 py-4 shadow-lg"
@@ -201,7 +206,7 @@ export default function SpotifyPlayer() {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold truncate">
-                {currentTrack?.name || "Sua próxima música espera por você"}
+                {currentTrack?.name || "Preparando reprodução"}
               </p>
               <p className="text-xs text-gray-400 truncate mt-1">
                 {currentTrack
@@ -212,6 +217,16 @@ export default function SpotifyPlayer() {
               </p>
             </div>
           </div>
+          {!joined && (
+            <button
+              onClick={previousTrack}
+              disabled={!deviceId || busy || !currentTrack || !canGoPrevious}
+              aria-label="Música anterior"
+              className="cursor-default rounded-full p-3 text-white hover:bg-gray-800 disabled:opacity-40"
+            >
+              <FiSkipBack size={22} />
+            </button>
+          )}
           <button
             disabled={
               joined
@@ -224,7 +239,7 @@ export default function SpotifyPlayer() {
                 : playTrack(currentTrack)
             }
             aria-label={isPlaying ? "Pausar música" : "Reproduzir música"}
-            className="w-11 h-11 rounded-full bg-white text-gray-950 flex items-center justify-center hover:bg-fuchsia-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            className="cursor-default w-11 h-11 rounded-full bg-white text-gray-950 flex items-center justify-center hover:bg-fuchsia-200 transition-colors disabled:opacity-40 shrink-0"
           >
             {isPlaying ? (
               <FiPause size={21} />
@@ -232,12 +247,16 @@ export default function SpotifyPlayer() {
               <FiPlay size={21} className="ml-0.5" />
             )}
           </button>
-          {joined && (
+          {(joined || currentTrack) && (
             <button
-              onClick={() => control("NEXT")}
-              disabled={!bothReady || playbackBusy || !currentTrack}
+              onClick={() => (joined ? control("NEXT") : nextTrack())}
+              disabled={
+                joined
+                  ? !bothReady || playbackBusy || !currentTrack
+                  : !deviceId || busy || !canGoNext
+              }
               aria-label="Próxima música da fila"
-              className="cursor-pointer rounded-full p-3 text-white hover:bg-gray-800 disabled:opacity-40"
+              className="cursor-default rounded-full p-3 text-white hover:bg-gray-800 disabled:opacity-40"
             >
               <FiSkipForward size={22} />
             </button>

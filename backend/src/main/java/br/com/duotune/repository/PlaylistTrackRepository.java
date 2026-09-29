@@ -10,6 +10,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PlaylistTrackRepository extends JpaRepository<PlaylistTrack, Long> {
+    // Uma capa por playlist, seguindo a ordem das músicas, em uma única consulta.
+    @Query("""
+        SELECT pt FROM PlaylistTrack pt
+        WHERE pt.playlist.id IN :playlistIds
+          AND NOT EXISTS (SELECT earlier.id FROM PlaylistTrack earlier
+              WHERE earlier.playlist.id = pt.playlist.id AND earlier.position < pt.position)
+        """)
+    List<PlaylistTrack> findFirstTracksByPlaylistIds(@Param("playlistIds") List<Long> playlistIds);
+
     boolean existsByPlaylistIdAndTrackSpotifyId(Long playlistId, String trackSpotifyId);
 
     @Query("SELECT COALESCE(MAX(pt.position), 0) FROM PlaylistTrack pt WHERE pt.playlist.id = :playlistId")
