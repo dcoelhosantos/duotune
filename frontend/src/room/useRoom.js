@@ -1,14 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Client, TickerStrategy } from "@stomp/stompjs";
 import { getSessionExpiration } from "../auth/useSession";
 import { roomApi } from "./api";
 
 function storedDuoId() {
-  try { return JSON.parse(localStorage.getItem("user") || "{}").duoId ?? null; }
-  catch { return null; }
+  try {
+    return JSON.parse(localStorage.getItem("user") || "{}").duoId ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function useRoomConnection() {
+  const [clientId] = useState(() => crypto.randomUUID());
   const [info, setInfo] = useState(null);
   const [snapshot, setSnapshot] = useState(null);
   const [status, setStatus] = useState("loading");
@@ -56,9 +60,15 @@ export function useRoomConnection() {
     let stableConnection;
     let client;
     const abort = new AbortController();
-    const clearPolling = () => { clearInterval(poll); clearTimeout(initialRefresh); clearTimeout(stableConnection); };
-    const apply = (state) => setSnapshot((previous) =>
-      !previous || state.version >= previous.version ? state : previous);
+    const clearPolling = () => {
+      clearInterval(poll);
+      clearTimeout(initialRefresh);
+      clearTimeout(stableConnection);
+    };
+    const apply = (state) =>
+      setSnapshot((previous) =>
+        !previous || state.version >= previous.version ? state : previous,
+      );
     function endSession(message, nextStatus = "error") {
       if (!active || stopped) return;
       stopped = true;
@@ -81,7 +91,13 @@ export function useRoomConnection() {
         setInfo(next);
         apply(next.state);
       } catch (err) {
-        if (!active || stopped || currentGeneration !== generation || err.name === "AbortError") return;
+        if (
+          !active ||
+          stopped ||
+          currentGeneration !== generation ||
+          err.name === "AbortError"
+        )
+          return;
         if ([401, 403, 409].includes(err.status)) {
           endSession(err.message, err.status === 409 ? "unpaired" : "error");
           return;
@@ -96,9 +112,16 @@ export function useRoomConnection() {
         setInfo(current);
         setSnapshot(current.state);
         setError("");
-        if (!wanted) { setStatus("idle"); return; }
-        const url = new URL(import.meta.env.VITE_ROOM_WS_URL || "/ws", window.location.href);
-        url.protocol = url.protocol === "https:" || url.protocol === "wss:" ? "wss:" : "ws:";
+        if (!wanted) {
+          setStatus("idle");
+          return;
+        }
+        const url = new URL(
+          import.meta.env.VITE_ROOM_WS_URL || "/ws",
+          window.location.href,
+        );
+        url.protocol =
+          url.protocol === "https:" || url.protocol === "wss:" ? "wss:" : "ws:";
         client = new Client({
           brokerURL: url.href,
           heartbeatIncoming: 10000,
@@ -108,31 +131,53 @@ export function useRoomConnection() {
           reconnectDelay: 4000,
           connectionTimeout: 10000,
           beforeConnect: () => {
-            if (!active || stopped) { void client.deactivate(); return; }
-            if (getSessionExpiration() <= Date.now() || ++failures > 5) {
-              endSession(getSessionExpiration() <= Date.now()
-                ? "Sua sessão expirou. Entre novamente."
-                : "A conexão com a sala foi encerrada após várias tentativas. Entre na sala novamente.");
+            if (!active || stopped) {
+              void client.deactivate();
               return;
             }
-            client.connectHeaders = { Authorization: `Bearer ${localStorage.getItem("accessToken")}` };
+            if (getSessionExpiration() <= Date.now() || ++failures > 5) {
+              endSession(
+                getSessionExpiration() <= Date.now()
+                  ? "Sua sessão expirou. Entre novamente."
+                  : "A conexão com a sala foi encerrada após várias tentativas. Entre na sala novamente.",
+              );
+              return;
+            }
+            client.connectHeaders = {
+              "room-client-id": clientId,
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            };
           },
           onConnect: () => {
-            if (!active || stopped) { void client.deactivate(); return; }
+            if (!active || stopped) {
+              void client.deactivate();
+              return;
+            }
             generation++;
             setSnapshot(null);
             client.subscribe(`/topic/duos/${current.duoId}/room`, (frame) => {
               if (!active || stopped) return;
               try {
                 const state = JSON.parse(frame.body);
-                if (state.duoId === current.duoId && Array.isArray(state.messages) && Array.isArray(state.onlineUserIds)) apply(state);
-              } catch { setError("Não foi possível atualizar a sala. Reconecte para continuar."); }
+                if (
+                  state.duoId === current.duoId &&
+                  Array.isArray(state.messages) &&
+                  Array.isArray(state.onlineUserIds)
+                )
+                  apply(state);
+              } catch {
+                setError(
+                  "Não foi possível atualizar a sala. Reconecte para continuar.",
+                );
+              }
             });
             setStatus("connected");
             setError("");
             clearPolling();
             // redefine o número de tentativas apenas após uma conexão estável, não apenas quando estiver conectado.
-            stableConnection = setTimeout(() => { failures = 0; }, 30000);
+            stableConnection = setTimeout(() => {
+              failures = 0;
+            }, 30000);
             void refresh();
             initialRefresh = setTimeout(refresh, 1000);
             poll = setInterval(refresh, 10000);
@@ -140,8 +185,9 @@ export function useRoomConnection() {
           onStompError: (frame) => {
             if (!active || stopped) return;
             const message = frame.body || frame.headers.message;
-            const sessionClosed = [frame.body, frame.headers.message]
-              .some((value) => /^session closed\.?$/i.test(value?.trim() || ""));
+            const sessionClosed = [frame.body, frame.headers.message].some(
+              (value) => /^session closed\.?$/i.test(value?.trim() || ""),
+            );
             if (sessionClosed && getSessionExpiration() > Date.now()) {
               generation++;
               clearPolling();
@@ -151,9 +197,12 @@ export function useRoomConnection() {
               client.forceDisconnect();
               return;
             }
-            endSession(getSessionExpiration() <= Date.now()
-              ? "Sua sessão expirou. Entre novamente."
-              : message || "Sua sessão na sala foi encerrada. Entre na sala novamente.");
+            endSession(
+              getSessionExpiration() <= Date.now()
+                ? "Sua sessão expirou. Entre novamente."
+                : message ||
+                    "Sua sessão na sala foi encerrada. Entre na sala novamente.",
+            );
           },
           onWebSocketClose: () => {
             generation++;
@@ -182,7 +231,7 @@ export function useRoomConnection() {
       void client?.deactivate();
       clientRef.current = null;
     };
-  }, [wanted, attempt]);
+  }, [wanted, attempt, clientId]);
 
   // Consultar presença não assina o canal nem coloca este usuário na sala.
   useEffect(() => {
@@ -199,7 +248,9 @@ export function useRoomConnection() {
       } catch (err) {
         // Não anunciar presença antiga quando não foi possível verificá-la.
         if (active && err.name !== "AbortError") setSnapshot(null);
-      } finally { pending = false; }
+      } finally {
+        pending = false;
+      }
     }
     void checkPresence();
     const timer = setInterval(checkPresence, 10000);
@@ -212,14 +263,49 @@ export function useRoomConnection() {
     };
   }, [wanted, info?.duoId, status]);
 
-  function join() { endedRef.current = false; setError(""); setStatus("connecting"); setWanted(true); setAttempt((value) => value + 1); }
-  function leave() { endedRef.current = false; setError(""); setStatus("idle"); setWanted(false); }
+  function join() {
+    endedRef.current = false;
+    setError("");
+    setStatus("connecting");
+    setWanted(true);
+    setAttempt((value) => value + 1);
+  }
+  function leave() {
+    endedRef.current = false;
+    setError("");
+    setStatus("idle");
+    setWanted(false);
+  }
   async function send(text, clientId) {
-    if (!clientRef.current?.connected || status !== "connected") throw new Error("Reconecte à sala antes de enviar.");
+    if (!clientRef.current?.connected || status !== "connected")
+      throw new Error("Reconecte à sala antes de enviar.");
     const abort = new AbortController();
     sendRef.current = abort;
-    const state = await roomApi("/messages", { method: "POST", body: JSON.stringify({ text, clientId }), signal: abort.signal });
-    if (!abort.signal.aborted) setSnapshot((previous) => !previous || state.version >= previous.version ? state : previous);
+    const state = await roomApi("/messages", {
+      method: "POST",
+      body: JSON.stringify({ text, clientId }),
+      signal: abort.signal,
+    });
+    if (!abort.signal.aborted)
+      setSnapshot((previous) =>
+        !previous || state.version >= previous.version ? state : previous,
+      );
   }
-  return { info, snapshot, status, error, joined: wanted, join, leave, send };
+  const updateSnapshot = useCallback((state) => {
+    setSnapshot((previous) =>
+      !previous || state.version >= previous.version ? state : previous,
+    );
+  }, []);
+  return {
+    info,
+    snapshot,
+    status,
+    error,
+    joined: wanted,
+    join,
+    leave,
+    send,
+    updateSnapshot,
+    clientId,
+  };
 }
