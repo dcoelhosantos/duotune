@@ -60,10 +60,7 @@ public class PlaylistService {
     public List<PlaylistResponse> getUserPlaylists(String email) {
         User user = getAuthenticatedUser(email);
 
-        return playlistRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId())
-                .stream()
-                .map(PlaylistResponse::fromEntity)
-                .toList();
+        return playlistResponses(playlistRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId()));
     }
 
     @Transactional
@@ -284,9 +281,15 @@ public class PlaylistService {
                 : activeDuo.getUser1().getId();
 
         // 3. Busca e retorna as playlists do amigo
-        return playlistRepository.findAllByUserIdOrderByCreatedAtDesc(partnerId)
-                .stream()
-                .map(PlaylistResponse::fromEntity)
+        return playlistResponses(playlistRepository.findAllByUserIdOrderByCreatedAtDesc(partnerId));
+    }
+    private List<PlaylistResponse> playlistResponses(List<Playlist> playlists) {
+        if (playlists.isEmpty()) return List.of();
+        var covers = new java.util.HashMap<Long, String>();
+        playlistTrackRepository.findFirstTracksByPlaylistIds(playlists.stream().map(Playlist::getId).toList())
+                .forEach(track -> covers.put(track.getPlaylist().getId(), track.getImageUrl()));
+        return playlists.stream()
+                .map(playlist -> PlaylistResponse.fromEntity(playlist, covers.get(playlist.getId())))
                 .toList();
     }
 }

@@ -1,23 +1,35 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
 import {
-  FiTrash2,
+  FiArrowLeft,
   FiClock,
-  FiPlay,
-  FiMoreVertical,
-  FiPlus,
-  FiList,
-  FiShare2,
   FiEdit2,
+  FiList,
+  FiMoreVertical,
   FiMusic,
+  FiPause,
+  FiPlay,
+  FiPlus,
+  FiShare2,
+  FiTrash2,
 } from "react-icons/fi";
-import { playlistApi } from "../playlists/api";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import AddToPlaylistModal from "../components/AddToPlaylistModal";
 import EditPlaylistModal from "../components/EditPlaylistModal"; // Importe o modal de edição
+import { playlistApi } from "../playlists/api";
+import { useSpotify } from "../spotify/SpotifyContext";
 
 export default function PlaylistDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const {
+    playPlaylist,
+    playTrack,
+    activePlaylistId,
+    currentTrack,
+    isPlaying,
+    busy,
+  } = useSpotify();
+  const activePlaylist = String(activePlaylistId) === id;
 
   const [playlist, setPlaylist] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -102,8 +114,18 @@ export default function PlaylistDetails() {
         <div className="fixed inset-0 z-40" onClick={closeMenus}></div>
       )}
 
-      <div className="w-full bg-gradient-to-b from-fuchsia-900/40 to-gray-950 border-b border-gray-800/50">
-        <div className="max-w-7xl mx-auto px-6 pt-12 pb-8 flex flex-col md:flex-row items-center md:items-end gap-8 relative">
+      <div className="w-full bg-linear-to-b from-fuchsia-900/40 to-gray-950 border-b border-gray-800/50">
+        <div className="max-w-7xl mx-auto px-6 pt-6">
+          <Link
+            to="/"
+            aria-label="Voltar para a biblioteca"
+            className="inline-flex items-center gap-2 text-sm hover:text-gray-400 transition-colors"
+          >
+            <FiArrowLeft size={24} aria-hidden="true" /> Voltar para a
+            biblioteca
+          </Link>
+        </div>
+        <div className="max-w-7xl mx-auto px-6 pt-6 pb-8 flex flex-col md:flex-row items-center md:items-end gap-8 relative">
           <div className="w-64 h-64 bg-gray-800 shadow-2xl rounded-md flex items-center justify-center shrink-0 overflow-hidden relative group">
             {coverImage ? (
               <img
@@ -144,10 +166,24 @@ export default function PlaylistDetails() {
 
             <div className="flex items-center gap-4 mt-4">
               <button
-                disabled={playlist.tracks.length === 0}
+                onClick={() =>
+                  activePlaylist && currentTrack
+                    ? playTrack(currentTrack)
+                    : playPlaylist(playlist)
+                }
+                aria-label={
+                  activePlaylist && isPlaying
+                    ? "Pausar playlist"
+                    : "Reproduzir playlist"
+                }
+                disabled={busy || playlist.tracks.length === 0}
                 className="w-14 h-14 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed shadow-xl cursor-pointer"
               >
-                <FiPlay size={24} className="fill-black ml-1" />
+                {activePlaylist && isPlaying ? (
+                  <FiPause size={24} />
+                ) : (
+                  <FiPlay size={24} className="fill-black ml-1" />
+                )}
               </button>
 
               <button
@@ -224,12 +260,24 @@ export default function PlaylistDetails() {
                 key={track.trackSpotifyId}
                 className="grid grid-cols-[16px_minmax(0,1fr)_120px_40px] gap-4 items-center px-4 py-3 hover:bg-gray-800/60 rounded-lg group transition-colors relative"
               >
-                <div className="text-gray-500 text-right group-hover:hidden">
-                  {index + 1}
-                </div>
-                <div className="hidden group-hover:block text-white cursor-pointer">
-                  <FiPlay />
-                </div>
+                <button
+                  onClick={() =>
+                    activePlaylist && currentTrack?.id === track.trackSpotifyId
+                      ? playTrack(currentTrack)
+                      : playPlaylist(playlist, index)
+                  }
+                  disabled={busy}
+                  aria-label={`${activePlaylist && currentTrack?.id === track.trackSpotifyId && isPlaying ? "Pausar" : "Reproduzir"} ${track.title || "música"}`}
+                  className="text-fuchsia-300 hover:text-white disabled:opacity-40"
+                >
+                  {activePlaylist &&
+                  currentTrack?.id === track.trackSpotifyId &&
+                  isPlaying ? (
+                    <FiPause />
+                  ) : (
+                    <FiPlay />
+                  )}
+                </button>
 
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-10 h-10 bg-gray-800 rounded shrink-0 overflow-hidden flex items-center justify-center">

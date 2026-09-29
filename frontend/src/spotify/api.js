@@ -1,19 +1,30 @@
 export async function spotifyApi(path, options = {}) {
-  const response = await fetch(`/api/spotify/${path}`, {
-    ...options,
-    credentials: "same-origin",
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-      ...options.headers,
-    },
-  });
+  let response;
+  try {
+    response = await fetch(`/api/spotify/${path}`, {
+      ...options,
+      credentials: "same-origin",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        ...options.headers,
+      },
+    });
+  } catch (error) {
+    if (error.name === "AbortError") throw error;
+    throw new Error(
+      "Não foi possível conectar ao servidor do DuoTune. Verifique se o frontend e o backend estão rodando e tente novamente.",
+      { cause: error },
+    );
+  }
 
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
     const error = new Error(
-      data.message ||
-        "Não foi possível acessar a integração com o Spotify. Tente novamente.",
+      response.status === 401
+        ? "Sua sessão expirou. Entre novamente no DuoTune."
+        : data.message ||
+            "Não foi possível acessar a integração com o Spotify. Tente novamente.",
     );
     error.status = response.status;
     throw error;

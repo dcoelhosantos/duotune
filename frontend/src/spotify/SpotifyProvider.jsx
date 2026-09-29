@@ -11,7 +11,8 @@ function spotifyErrorMessage(error) {
 
 export default function SpotifyProvider({ children }) {
   const [needsAuthorization, setNeedsAuthorization] = useState(false);
-  const [playerVisible, setPlayerVisible] = useState(true);
+  const [playerVisible, setPlayerVisible] = useState(false);
+  const [activePlaylistId, setActivePlaylistId] = useState(null);
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [deviceId, setDeviceId] = useState(null);
@@ -29,6 +30,7 @@ export default function SpotifyProvider({ children }) {
   const [audioBlocked, setAudioBlocked] = useState(false);
   const setRoomMode = useCallback((enabled) => {
     roomModeRef.current = enabled;
+    if (enabled) setActivePlaylistId(null);
     if (!enabled) {
       clearTimeout(roomNoticeTimerRef.current);
       setRoomNotice(false);
@@ -274,11 +276,14 @@ export default function SpotifyProvider({ children }) {
     }
   }
 
-  async function playTrack(track) {
+  async function playTrack(track, playlist = null) {
     if (roomModeRef.current) {
       clearTimeout(roomNoticeTimerRef.current);
       setRoomNotice(true);
-      roomNoticeTimerRef.current = setTimeout(() => setRoomNotice(false), 10000);
+      roomNoticeTimerRef.current = setTimeout(
+        () => setRoomNotice(false),
+        10000,
+      );
       return;
     }
     setPlayerVisible(true);
@@ -289,12 +294,23 @@ export default function SpotifyProvider({ children }) {
     try {
       await playerRef.current.activateElement();
       const current = await playerRef.current.getCurrentState();
-      const sameTrack = current?.track_window.current_track.id === track.id;
+      const sameTrack =
+        !playlist && current?.track_window.current_track.id === track.id;
       const pause = sameTrack && !current.paused;
       const body =
         pause || sameTrack
           ? undefined
-          : JSON.stringify({ uris: [`spotify:track:${track.id}`] });
+          : JSON.stringify(
+              playlist
+                ? {
+                    uris: playlist.tracks.map(
+                      (item) => `spotify:track:${item.trackSpotifyId}`,
+                    ),
+                    offset: { position: playlist.startIndex },
+                    position_ms: 0,
+                  }
+                : { uris: [`spotify:track:${track.id}`] },
+            );
       async function send(force) {
         const data = await spotifyApi(
           force ? "refresh" : "token",
@@ -325,6 +341,7 @@ export default function SpotifyProvider({ children }) {
             "Não foi possível reproduzir a música. Tente novamente.",
         );
       }
+      if (!sameTrack) setActivePlaylistId(playlist?.id ?? null);
     } catch (err) {
       if (/^session closed\.?$/i.test(err?.message?.trim() || "")) {
         setDeviceId(null);
@@ -332,6 +349,46 @@ export default function SpotifyProvider({ children }) {
       }
       setError(spotifyErrorMessage(err));
       setNeedsAuthorization(err.status === 409);
+    } finally {
+      commandRef.current = false;
+      setBusy(false);
+    }
+  }
+
+  function playPlaylist(playlist, startIndex = 0) {
+    const track = playlist.tracks[startIndex];
+    if (!track) return;
+    return playTrack({ id: track.trackSpotifyId }, { ...playlist, startIndex });
+  }
+
+  async function skipTrack(direction) {
+    if (
+      roomModeRef.current ||
+      commandRef.current ||
+      !deviceId ||
+      !playerRef.current
+    )
+      return;
+    const player = playerRef.current;
+    commandRef.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      await player.activateElement();
+      const current = await player.getCurrentState();
+      if (
+        !current ||
+        current.disallows?.[
+          direction === "next" ? "skipping_next" : "skipping_prev"
+        ]
+      )
+        return;
+      if (direction === "next") await player.nextTrack();
+      else await player.previousTrack();
+      if (playerRef.current === player)
+        setState(await player.getCurrentState());
+    } catch (err) {
+      setError(spotifyErrorMessage(err));
     } finally {
       commandRef.current = false;
       setBusy(false);
@@ -359,6 +416,12 @@ export default function SpotifyProvider({ children }) {
         error,
         busy,
         playTrack,
+        playPlaylist,
+        activePlaylistId,
+        nextTrack: () => skipTrack("next"),
+        previousTrack: () => skipTrack("previous"),
+        canGoNext: !!state && !state.disallows?.skipping_next,
+        canGoPrevious: !!state && !state.disallows?.skipping_prev,
         volume,
         changeVolume,
         toggleMute,

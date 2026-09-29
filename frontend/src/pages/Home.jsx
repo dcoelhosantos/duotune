@@ -1,31 +1,41 @@
 import { useEffect, useState } from "react";
-import { FiPlay, FiUserPlus, FiPlus, FiMusic } from "react-icons/fi";
+import { FiMusic, FiPlus, FiUserPlus } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import { playlistApi } from "../playlists/api";
 import CreatePlaylistModal from "../components/CreatePlaylistModal";
+import { playlistApi } from "../playlists/api";
 
-const PlaylistCard = ({ pl }) => (
-  <Link
-    to={`/playlist/${pl.id}`}
-    className="bg-gray-950 p-4 rounded-xl hover:bg-gray-800 transition-colors cursor-pointer group select-none border border-transparent hover:border-gray-800 block"
-  >
-    <div className="w-full aspect-square bg-gray-800/50 rounded-md mb-4 shadow-lg overflow-hidden relative flex items-center justify-center">
-      <FiMusic
-        size={40}
-        className="text-gray-600 group-hover:text-fuchsia-500 transition-colors"
-      />
-      <button className="absolute bottom-2 right-2 w-10 h-10 bg-fuchsia-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-105 shadow-md cursor-pointer">
-        <FiPlay size={20} className="text-white fill-white ml-1" />
-      </button>
-    </div>
-    <h3 className="font-semibold truncate" title={pl.name}>
-      {pl.name}
-    </h3>
-    <p className="text-sm text-gray-400 truncate mt-1">
-      Criada em {new Date(pl.createdAt).toLocaleDateString("pt-BR")}
-    </p>
-  </Link>
-);
+const PlaylistCard = ({ pl }) => {
+  const [failedCover, setFailedCover] = useState(null);
+  return (
+    <Link
+      to={`/playlist/${pl.id}`}
+      className="group block rounded-2xl border border-gray-800/70 bg-gray-950/60 p-3 transition hover:border-fuchsia-500/40 hover:bg-gray-800/60 focus-visible:outline-2 focus-visible:outline-fuchsia-400 sm:p-4"
+    >
+      <div className="w-full aspect-square bg-gray-800/50 rounded-md mb-4 shadow-lg overflow-hidden relative flex items-center justify-center">
+        {pl.coverImageUrl && failedCover !== pl.coverImageUrl ? (
+          <img
+            src={pl.coverImageUrl}
+            alt={`Capa de ${pl.name}`}
+            loading="lazy"
+            onError={() => setFailedCover(pl.coverImageUrl)}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+          />
+        ) : (
+          <FiMusic
+            size={40}
+            className="text-gray-600 group-hover:text-fuchsia-500 transition-colors"
+          />
+        )}
+      </div>
+      <h3 className="font-semibold truncate" title={pl.name}>
+        {pl.name}
+      </h3>
+      <p className="text-sm text-gray-400 truncate mt-1">
+        Criada em {new Date(pl.createdAt).toLocaleDateString("pt-BR")}
+      </p>
+    </Link>
+  );
+};
 
 export default function Home() {
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -36,29 +46,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
-
-  const playlists = [
-    {
-      id: 1,
-      name: "Nossa História",
-      color: "bg-gradient-to-br from-fuchsia-600 to-purple-900",
-    },
-    {
-      id: 2,
-      name: "Indie Vibes",
-      color: "bg-gradient-to-br from-blue-600 to-indigo-900",
-    },
-    {
-      id: 3,
-      name: "Para Relaxar",
-      color: "bg-gradient-to-br from-emerald-600 to-teal-900",
-    },
-    {
-      id: 4,
-      name: "Rock Clássico",
-      color: "bg-gradient-to-br from-orange-600 to-red-900",
-    },
-  ];
 
   const fetchPlaylistsManually = async () => {
     setLoading(true);
@@ -98,55 +85,28 @@ export default function Home() {
   }, [hasDuo]);
 
   return (
-    <div className="space-y-8 relative pb-20">
-      {!hasDuo && (
-        <div className="bg-gradient-to-r from-fuchsia-700 to-purple-900 rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between shadow-lg border border-fuchsia-500/30">
+    <div className="mx-auto max-w-7xl space-y-10 pb-8">
+      <section aria-labelledby="library-title">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white mb-2">
-              Encontre sua dupla! 🎵
-            </h2>
-            <p className="text-purple-200">
-              Você ainda não formou o seu Duo. Convide alguém especial para
-              compartilhar e mesclar sua trilha sonora.
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-400">
+              {storedUser.name?.trim()
+                ? `Olá, ${storedUser.name.trim().split(/\s+/)[0]}!`
+                : "Seu espaço musical"}
+            </p>
+            <h1
+              id="library-title"
+              className="text-3xl font-bold tracking-tight text-white sm:text-4xl"
+            >
+              Biblioteca
+            </h1>
+            <p className="mt-3 text-sm text-gray-400">
+              Suas músicas, suas descobertas, suas playlists.
             </p>
           </div>
-          <Link
-            to="/convidar"
-            className="mt-6 md:mt-0 bg-white text-fuchsia-700 px-6 py-3 rounded-full font-bold hover:bg-gray-100 transition-colors flex items-center gap-2 shadow-md hover:scale-105"
-          >
-            <FiUserPlus size={20} /> Convidar agora
-          </Link>
-        </div>
-      )}
-
-      <div>
-        <h1 className="text-3xl font-bold mb-6">Olá!</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {playlists.map((playlist) => (
-            <div
-              key={playlist.id}
-              className="flex items-center gap-4 bg-gray-800/50 hover:bg-gray-800 transition-colors rounded-md overflow-hidden cursor-pointer group"
-            >
-              <div
-                className={`w-20 h-20 ${playlist.color} shrink-0 shadow-lg`}
-              />
-              <div className="font-semibold">{playlist.name}</div>
-              <button className="ml-auto mr-4 w-12 h-12 bg-fuchsia-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-xl hover:scale-105 cursor-pointer">
-                <FiPlay size={24} className="text-white fill-white ml-1" />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="pt-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <h2 className="text-2xl font-bold hover:underline cursor-pointer">
-            Sua Biblioteca Pessoal
-          </h2>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 text-sm font-semibold text-fuchsia-400 hover:text-fuchsia-300 transition-colors bg-fuchsia-500/10 px-4 py-2 rounded-full border border-fuchsia-500/30 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-xl bg-fuchsia-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-fuchsia-500"
           >
             <FiPlus size={18} /> Criar Playlist
           </button>
@@ -168,13 +128,27 @@ export default function Home() {
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      <div className="pt-8">
+      <section
+        aria-labelledby="duo-playlists-title"
+        className="border-t border-gray-800 pt-8"
+      >
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <h2 className="text-2xl font-bold hover:underline cursor-pointer">
-            Playlists do Duo
-          </h2>
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-400">
+              Seu Duo
+            </p>
+            <h2
+              id="duo-playlists-title"
+              className="text-2xl font-semibold tracking-tight"
+            >
+              Playlists do Duo
+            </h2>
+            <p className="mt-2 text-sm text-gray-400">
+              Explore o que a sua dupla está ouvindo.
+            </p>
+          </div>
         </div>
 
         {loading ? (
@@ -183,6 +157,12 @@ export default function Home() {
           <div className="text-gray-500 text-sm bg-gray-900/50 p-6 rounded-xl border border-gray-800 border-dashed">
             Você ainda não formou um Duo. Convide sua dupla para visualizar as
             playlists aqui!
+            <Link
+              to="/convidar"
+              className="mt-4 inline-flex items-center gap-2 text-fuchsia-300 hover:text-fuchsia-200"
+            >
+              <FiUserPlus /> Convidar minha dupla
+            </Link>
           </div>
         ) : duoPlaylists.length === 0 ? (
           <div className="text-gray-500 text-sm bg-gray-900/50 p-6 rounded-xl border border-gray-800 border-dashed">
@@ -195,7 +175,7 @@ export default function Home() {
             ))}
           </div>
         )}
-      </div>
+      </section>
 
       {showCreateModal && (
         <CreatePlaylistModal
