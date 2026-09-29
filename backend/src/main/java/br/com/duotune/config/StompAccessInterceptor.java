@@ -29,7 +29,7 @@ public class StompAccessInterceptor implements ChannelInterceptor {
     private final DuoRepository duos;
     private final Map<String, SessionAccess> sessions = new ConcurrentHashMap<>();
 
-    private record SessionAccess(Long userId, Long duoId, Instant expiresAt) {
+    private record SessionAccess(Long userId, Long duoId, String clientId, Instant expiresAt) {
         boolean valid() { return expiresAt != null && Instant.now().isBefore(expiresAt); }
     }
 
@@ -60,7 +60,7 @@ public class StompAccessInterceptor implements ChannelInterceptor {
             var user = users.findByEmail(email)
                     .orElseThrow(() -> new AccessDeniedException("Usuário não encontrado."));
             Long activeDuoId = duos.findActiveDuoId(user.getId()).orElse(null);
-            var session = new SessionAccess(user.getId(), activeDuoId, JWT.decode(token).getExpiresAtAsInstant());
+            var session = new SessionAccess(user.getId(), activeDuoId, headers.getFirstNativeHeader("room-client-id"), JWT.decode(token).getExpiresAtAsInstant());
             if (!session.valid()) throw new AccessDeniedException("Sessão expirada ou inválida.");
             headers.setUser(new UsernamePasswordAuthenticationToken(email, null, List.of()));
             sessions.put(sessionId, session);
@@ -90,6 +90,11 @@ public class StompAccessInterceptor implements ChannelInterceptor {
     public boolean isSessionActive(String sessionId) {
         SessionAccess session = sessions.get(sessionId);
         return session != null && session.valid();
+    }
+
+    public boolean isClientActive(Long userId, String clientId) {
+        return clientId != null && sessions.values().stream().anyMatch(session ->
+                session.valid() && session.userId().equals(userId) && clientId.equals(session.clientId()));
     }
 
     public ChannelInterceptor outbound() {

@@ -12,9 +12,9 @@ export default function Sidebar() {
       </div>
 
       <nav className="space-y-4 flex-1">
-        <NavLink to="/sala" title={partnerWaiting ? "Seu Duo está esperando na sala" : "Sala musical"} className={({ isActive }) => `flex items-center gap-4 rounded-xl px-3 py-3 -mx-3 font-medium transition-colors ${isActive ? "bg-fuchsia-500/10 text-fuchsia-300" : "text-gray-300 hover:bg-gray-900 hover:text-white"}`}>
+        <NavLink to="/sala" title={partnerWaiting ? "Seu Duo está esperando na sala" : "Sala Musical"} className={({ isActive }) => `flex items-center gap-4 rounded-xl px-3 py-3 -mx-3 font-medium transition-colors ${isActive ? "bg-fuchsia-500/10 text-fuchsia-300" : "text-gray-300 hover:bg-gray-900 hover:text-white"}`}>
           <span className="relative shrink-0"><FiHeadphones size={24} />{partnerWaiting && <span aria-hidden="true" className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-emerald-400 motion-safe:animate-pulse" />}</span>
-          <span className="sr-only md:not-sr-only">Sala musical{partnerWaiting && <span className="mt-1 block text-xs text-emerald-300">Seu Duo está esperando</span>}</span>
+          <span className="sr-only md:not-sr-only">Sala Musical{partnerWaiting && <span className="mt-1 block text-xs text-emerald-300">Seu Duo está esperando</span>}</span>
         </NavLink>
         <Link
           to="/"

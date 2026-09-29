@@ -21,6 +21,26 @@ public class RoomController {
         return rooms.chat(principal.getName(), request);
     }
 
+    @PostMapping("/queue")
+    public RoomService.State addTrack(Principal principal, @RequestBody RoomService.AddTrackRequest request) {
+        return rooms.addTrack(principal.getName(), request);
+    }
+
+    @DeleteMapping("/queue/{entryId}")
+    public RoomService.State removeTrack(Principal principal, @PathVariable String entryId) {
+        return rooms.removeTrack(principal.getName(), entryId);
+    }
+
+    @PostMapping("/playback")
+    public RoomService.State playback(Principal principal, @RequestBody RoomService.PlaybackRequest request) {
+        return rooms.playback(principal.getName(), request);
+    }
+
+    @PostMapping("/ready")
+    public RoomService.State readiness(Principal principal, @RequestBody RoomService.ReadyRequest request) {
+        return rooms.readiness(principal.getName(), request);
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> error(ResponseStatusException error) {
         return ResponseEntity.status(error.getStatusCode()).body(new ErrorResponse("ROOM_REQUEST_FAILED", error.getReason()));

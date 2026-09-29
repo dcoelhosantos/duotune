@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { applyRoomPlayback } from "./syncRoomAudio";
 import { SpotifyContext } from "./SpotifyContext";
 import { loadSpotifySdk, spotifyApi } from "./api";
 
@@ -16,11 +17,56 @@ export default function SpotifyProvider({ children }) {
   const [deviceId, setDeviceId] = useState(null);
   const [state, setState] = useState(null);
   const [error, setError] = useState("");
+  const [roomNotice, setRoomNotice] = useState(false);
   const [busy, setBusy] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const previousVolumeRef = useRef(0.5);
   const playerRef = useRef(null);
+  const deviceRef = useRef(null);
   const commandRef = useRef(false);
+  const roomModeRef = useRef(false);
+  const roomNoticeTimerRef = useRef(null);
+  const [audioBlocked, setAudioBlocked] = useState(false);
+  const setRoomMode = useCallback((enabled) => {
+    roomModeRef.current = enabled;
+    if (!enabled) {
+      clearTimeout(roomNoticeTimerRef.current);
+      setRoomNotice(false);
+    }
+  }, []);
+  useEffect(() => {
+    return () => clearTimeout(roomNoticeTimerRef.current);
+  }, []);
+  const enableRoomAudio = useCallback(async () => {
+    if (!playerRef.current || !deviceRef.current)
+      throw new Error(
+        "Conecte seu Spotify Premium no perfil e aguarde o player.",
+      );
+    await playerRef.current.activateElement();
+    setAudioBlocked(false);
+  }, []);
+  const pauseRoomAudio = useCallback(async () => {
+    const player = playerRef.current;
+    if (!player) return;
+    const current = await player.getCurrentState();
+    if (current && !current.paused) await player.pause();
+  }, []);
+  const syncRoomAudio = useCallback(
+    async (track, playback, clockOffset, forceSeek) => {
+      const player = playerRef.current;
+      if (!player) throw new Error("Player indisponível. Reconecte o Spotify.");
+      if (commandRef.current) return;
+      await applyRoomPlayback(
+        player,
+        deviceRef.current,
+        track,
+        playback,
+        clockOffset,
+        forceSeek,
+      );
+    },
+    [],
+  );
 
   useEffect(() => {
     let disposed = false;
@@ -45,6 +91,10 @@ export default function SpotifyProvider({ children }) {
                 if (!disposed) {
                   setError(spotifyErrorMessage(err));
                   setNeedsAuthorization(err.status === 409);
+                  if (err.status === 409) {
+                    setDeviceId(null);
+                    deviceRef.current = null;
+                  }
                 }
               });
           },
@@ -52,6 +102,7 @@ export default function SpotifyProvider({ children }) {
         playerRef.current = player;
         player.addListener("ready", ({ device_id: activeDeviceId }) => {
           if (!disposed) {
+            deviceRef.current = activeDeviceId;
             setDeviceId(activeDeviceId);
             setError("");
             setNeedsAuthorization(false);
@@ -59,6 +110,7 @@ export default function SpotifyProvider({ children }) {
         });
         player.addListener("not_ready", () => {
           if (!disposed) {
+            deviceRef.current = null;
             setDeviceId(null);
             setState(null);
             setError(
@@ -85,6 +137,8 @@ export default function SpotifyProvider({ children }) {
           player.addListener(event, () => {
             if (!disposed) {
               setError(message);
+              if (["autoplay_failed", "playback_error"].includes(event))
+                setAudioBlocked(true);
               if (
                 [
                   "authentication_error",
@@ -221,6 +275,12 @@ export default function SpotifyProvider({ children }) {
   }
 
   async function playTrack(track) {
+    if (roomModeRef.current) {
+      clearTimeout(roomNoticeTimerRef.current);
+      setRoomNotice(true);
+      roomNoticeTimerRef.current = setTimeout(() => setRoomNotice(false), 10000);
+      return;
+    }
     setPlayerVisible(true);
     if (!deviceId || commandRef.current) return;
     commandRef.current = true;
@@ -282,6 +342,12 @@ export default function SpotifyProvider({ children }) {
   return (
     <SpotifyContext.Provider
       value={{
+        setRoomMode,
+        enableRoomAudio,
+        syncRoomAudio,
+        pauseRoomAudio,
+        audioBlocked,
+        roomNotice,
         needsAuthorization,
         playerVisible,
         closePlayer,

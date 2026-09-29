@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   FiX,
+  FiSkipForward,
   FiMusic,
   FiPause,
   FiPlay,
@@ -14,22 +15,37 @@ import { useSpotify } from "../spotify/SpotifyContext";
 import { useRoom } from "../room/RoomContext";
 
 export default function SpotifyPlayer() {
-  const { joined, status: roomStatus, error: roomError, leave } = useRoom();
   const {
+    joined,
+    status: roomStatus,
+    error: roomError,
+    leave,
+    snapshot,
+    track,
+    position: roomPosition,
+    bothReady,
+    needsAudioAction,
+    enableAudio,
+    playbackError,
+    playbackBusy,
+    control,
+  } = useRoom();
+  const {
+    roomNotice,
     needsAuthorization,
     playerVisible,
     closePlayer,
     connected,
     loading,
     deviceId,
-    currentTrack,
-    isPlaying,
+    currentTrack: personalTrack,
+    isPlaying: personalPlaying,
     error,
     busy,
     playTrack,
     seekTo,
-    position,
-    duration,
+    position: personalPosition,
+    duration: personalDuration,
     canSeek,
     volume,
     changeVolume,
@@ -42,6 +58,21 @@ export default function SpotifyPlayer() {
     setVolumeDraft(null);
   }
 
+  const currentTrack = joined
+    ? track
+      ? {
+          id: track.id,
+          name: track.title,
+          artists: [{ name: track.artist }],
+          album: { images: [{ url: track.imageUrl }] },
+        }
+      : null
+    : personalTrack;
+  const isPlaying = joined
+    ? roomStatus === "connected" && !!snapshot?.playback?.playing
+    : personalPlaying;
+  const position = joined ? roomPosition : personalPosition;
+  const duration = joined ? track?.durationMs || 0 : personalDuration;
   const cover = currentTrack?.album?.images?.[0]?.url;
   const volumePercent = volumeDraft ?? Math.round(volume * 100);
   if (!playerVisible && !joined && roomStatus !== "error") return null;
@@ -50,26 +81,81 @@ export default function SpotifyPlayer() {
       className="shrink-0 border-t border-gray-800 bg-gray-950 relative px-4 sm:px-8 pr-12 sm:pr-16 py-4 shadow-lg"
       aria-label="Player do Spotify"
     >
-      {!joined && roomStatus === "error" && <p role="alert" className="mb-3 text-sm text-amber-300">
-        {roomError} <Link to="/sala" className="underline">Abrir sala</Link>
-      </p>}
-      {joined && <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-3 text-xs">
-        <Link to="/sala" className={roomStatus === "connected" ? "text-emerald-300" : "text-amber-300"}>
-          {roomStatus === "connected" ? "● Conectado à sala" : ["connecting", "reconnecting"].includes(roomStatus) ? "● Conectando à sala..." : "● Sala sem conexão — abrir sala"}
-        </Link>
-        <span className="text-gray-400">Reprodução sincronizada em breve</span>
-        <button type="button" onClick={leave} className="cursor-pointer text-red-400 hover:text-red-300 focus-visible:outline focus-visible:outline-red-400">Sair da sala</button>
-      </div>}
-      {!joined && <button
-        type="button"
-        disabled={busy}
-        onClick={closePlayer}
-        aria-label="Fechar player e pausar música"
-        title="Fechar player"
-        className="absolute top-3 right-3 p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-40"
-      >
-        <FiX size={18} />
-      </button>}
+      {!joined && roomStatus === "error" && (
+        <p role="alert" className="mb-3 text-sm text-amber-300">
+          {roomError}{" "}
+          <Link to="/sala" className="underline">
+            Abrir sala
+          </Link>
+        </p>
+      )}
+      {joined && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-3 text-xs">
+          <Link
+            to="/sala"
+            className={
+              roomStatus === "connected" ? "text-emerald-300" : "text-amber-300"
+            }
+          >
+            {roomStatus === "connected"
+              ? "● Conectado à sala"
+              : ["connecting", "reconnecting"].includes(roomStatus)
+                ? "● Conectando à sala..."
+                : "● Sala sem conexão — abrir sala"}
+          </Link>
+          <span className="text-gray-400">
+            {bothReady
+              ? "Reprodução compartilhada"
+              : "Aguardando os dois players"}
+          </span>
+          <button
+            type="button"
+            onClick={leave}
+            className="cursor-pointer text-red-400 hover:text-red-300 focus-visible:outline focus-visible:outline-red-400"
+          >
+            Sair da sala
+          </button>
+        </div>
+      )}
+      {!joined && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={closePlayer}
+          aria-label="Fechar player e pausar música"
+          title="Fechar player"
+          className="absolute top-3 right-3 p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-40"
+        >
+          <FiX size={18} />
+        </button>
+      )}
+      {joined && needsAudioAction && (
+        <button
+          onClick={enableAudio}
+          disabled={roomStatus !== "connected"}
+          className="mb-3 cursor-pointer text-sm text-fuchsia-300 underline disabled:opacity-40"
+        >
+          Tentar ativar áudio da sala
+        </button>
+      )}
+      {joined && playbackError && (
+        <p role="alert" className="mb-3 text-sm text-red-300">
+          {playbackError}
+        </p>
+      )}
+      {joined && roomNotice && (
+        <p role="status" className="mb-3 text-sm text-amber-200">
+          Você está na sala musical. Adicione músicas à fila ou saia da sala
+          para ouvir individualmente.{" "}
+          <button
+            type="button"
+            onClick={leave}
+            className="cursor-pointer text-red-400 underline hover:text-red-300"
+          >
+            Sair da sala
+          </button>
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-red-300 text-sm mb-3">
           {error}{" "}
@@ -127,8 +213,16 @@ export default function SpotifyPlayer() {
             </div>
           </div>
           <button
-            disabled={!deviceId || busy || !currentTrack}
-            onClick={() => playTrack(currentTrack)}
+            disabled={
+              joined
+                ? !bothReady || playbackBusy || !currentTrack
+                : !deviceId || busy || !currentTrack
+            }
+            onClick={() =>
+              joined
+                ? control(isPlaying ? "PAUSE" : "PLAY")
+                : playTrack(currentTrack)
+            }
             aria-label={isPlaying ? "Pausar música" : "Reproduzir música"}
             className="w-11 h-11 rounded-full bg-white text-gray-950 flex items-center justify-center hover:bg-fuchsia-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
           >
@@ -138,6 +232,16 @@ export default function SpotifyPlayer() {
               <FiPlay size={21} className="ml-0.5" />
             )}
           </button>
+          {joined && (
+            <button
+              onClick={() => control("NEXT")}
+              disabled={!bothReady || playbackBusy || !currentTrack}
+              aria-label="Próxima música da fila"
+              className="cursor-pointer rounded-full p-3 text-white hover:bg-gray-800 disabled:opacity-40"
+            >
+              <FiSkipForward size={22} />
+            </button>
+          )}
           <div className="flex items-center gap-2 ml-auto">
             <button
               disabled={!deviceId || busy}
@@ -185,8 +289,14 @@ export default function SpotifyPlayer() {
           key={currentTrack.id}
           position={position}
           duration={duration}
-          disabled={!deviceId || busy || !canSeek}
-          onSeek={(target) => seekTo(target, currentTrack.id)}
+          disabled={
+            joined ? !bothReady || playbackBusy : !deviceId || busy || !canSeek
+          }
+          onSeek={(target) =>
+            joined
+              ? control("SEEK", Math.min(target, duration - 1))
+              : seekTo(target, currentTrack.id)
+          }
         />
       )}
     </footer>

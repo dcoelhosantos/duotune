@@ -4,17 +4,16 @@ import {
   FiArrowRight,
   FiCheck,
   FiHeadphones,
-  FiList,
   FiLock,
   FiLogOut,
   FiMessageCircle,
   FiMusic,
-  FiPlus,
   FiRefreshCw,
   FiSend,
   FiUsers,
   FiWifi,
 } from "react-icons/fi";
+import RoomQueue from "../room/RoomQueue";
 import { useRoom } from "../room/RoomContext";
 
 const labels = {
@@ -49,8 +48,22 @@ function Avatar({ member, online }) {
 }
 
 export default function MusicRoom() {
-  const { info, snapshot, status, error, joined, join, leave, send } =
-    useRoom();
+  const {
+    info,
+    snapshot,
+    status,
+    error,
+    joined,
+    join,
+    leave,
+    send,
+    track,
+    audioReady,
+    bothReady,
+    enableAudio,
+    needsAudioAction,
+    playbackError,
+  } = useRoom();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
@@ -125,7 +138,7 @@ export default function MusicRoom() {
             Seu espaço a dois
           </p>
           <h1 className="text-3xl font-bold tracking-tight">
-            Sala musical<span className="text-fuchsia-500">.</span>
+            Sala Musical
           </h1>
           <p className="mt-2 text-sm text-gray-400">
             A conversa de vocês também faz parte da trilha sonora.
@@ -230,12 +243,28 @@ export default function MusicRoom() {
               <div className="absolute inset-3 rounded-full border border-white/5" />
               <div className="absolute inset-6 rounded-full border border-white/5" />
               <div className="absolute inset-9 rounded-full border border-white/5" />
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-800 shadow-lg">
-                <FiMusic size={30} />
+              <div
+                className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-800 shadow-lg motion-safe:animate-[spin_12s_linear_infinite]"
+                style={{
+                  animationPlayState:
+                    snapshot?.playback?.playing && active
+                      ? "running"
+                      : "paused",
+                }}
+              >
+                {track?.imageUrl ? (
+                  <img
+                    src={track.imageUrl}
+                    alt={track.title}
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                ) : (
+                  <FiMusic size={30} />
+                )}
               </div>
             </div>
             <h2 className="text-xl font-semibold sm:text-2xl">
-              Toda boa trilha começa com vocês
+              {track?.title || "Toda boa trilha começa com vocês"}
             </h2>
             <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-gray-400">
               {active
@@ -259,39 +288,42 @@ export default function MusicRoom() {
               </p>
             )}
             <div className="mx-auto mt-8 max-w-md rounded-xl border border-white/5 bg-white/[0.03] p-3 text-xs leading-relaxed text-gray-400">
-              <span className="font-medium text-purple-200">
-                Reprodução conjunta em breve.
-              </span>{" "}
-              Por enquanto, o player do Spotify toca apenas para você.
+              {bothReady
+                ? "Os dois players estão prontos. Usem o player abaixo para ouvir juntos."
+                : "A reprodução fica disponível quando os dois estiverem na sala com suas contas Spotify Premium conectadas."}
+              {active && needsAudioAction && (
+                <button
+                  onClick={enableAudio}
+                  className="mt-3 block w-full cursor-pointer rounded-lg bg-fuchsia-600 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Tentar ativar áudio
+                </button>
+              )}
+              {audioReady && (
+                <p className="mt-2 text-emerald-300">Seu player está pronto</p>
+              )}
+              {playbackError && (
+                <p role="alert" className="mt-3 text-red-300">
+                  {playbackError}
+                </p>
+              )}
+              <Link
+                to="/perfil"
+                className="mt-3 block text-fuchsia-300 hover:underline"
+              >
+                Gerenciar conexão com Spotify
+              </Link>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-gray-800 bg-gray-950/60 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-sm font-semibold">
-                <FiList className="text-fuchsia-400" size={18} /> Fila
-                compartilhada
-              </h2>
-              <span className="rounded-full bg-gray-800 px-2.5 py-1 text-[11px] text-gray-400">
-                Em breve
-              </span>
-            </div>
-            <div className="mt-5 flex items-center gap-4 rounded-xl border border-dashed border-gray-700/70 p-4">
-              <div className="rounded-lg bg-gray-800 p-3 text-gray-500">
-                <FiPlus size={20} />
-              </div>
-              <p className="text-sm leading-relaxed text-gray-500">
-                As músicas escolhidas por vocês vão aparecer aqui.
-              </p>
-            </div>
-          </section>
+          <RoomQueue />
         </div>
 
         <section
           aria-label="Chat do Duo"
-          className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-800 bg-gray-950 xl:sticky xl:top-0"
+          className="flex h-[34rem] min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-800 bg-gray-950 xl:sticky xl:top-0 xl:h-[clamp(32rem,100cqh,42rem)]"
         >
-          <header className="flex items-center justify-between border-b border-gray-800 px-5 py-5">
+          <header className="flex items-center justify-between shrink-0 border-b border-gray-800 px-4 py-3">
             <div className="flex items-center gap-3">
               <span className="rounded-xl bg-fuchsia-500/10 p-2.5 text-fuchsia-400">
                 <FiMessageCircle size={20} />
@@ -322,7 +354,7 @@ export default function MusicRoom() {
               if (followChat.current) setHasUnread(false);
               else setHasUnread(true);
             }}
-            className="h-[360px] space-y-4 overflow-y-auto px-4 py-5 xl:h-[470px]"
+            className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-3"
           >
             {!messages?.length ? (
               <div className="flex h-full flex-col items-center justify-center px-5 text-center">
@@ -347,26 +379,28 @@ export default function MusicRoom() {
                     className={`flex ${mine ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[88%] rounded-2xl px-3.5 py-3 ${mine ? "rounded-br-sm bg-fuchsia-700/80" : "rounded-bl-sm bg-gray-800"}`}
+                      className={`max-w-[88%] rounded-2xl px-3 py-2 ${mine ? "rounded-br-sm bg-fuchsia-700/80" : "rounded-bl-sm bg-gray-800"}`}
                     >
                       {!mine && (
                         <p className="mb-1 text-xs font-medium text-fuchsia-300">
                           {message.senderName}
                         </p>
                       )}
-                      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed [overflow-wrap:anywhere]">
-                        {message.text}
-                      </p>
-                      <div
-                        className={`mt-1.5 flex items-center justify-end gap-1 text-[10px] ${mine ? "text-fuchsia-200" : "text-gray-500"}`}
-                      >
-                        <time dateTime={message.sentAt}>
-                          {new Date(message.sentAt).toLocaleTimeString(
-                            "pt-BR",
-                            { hour: "2-digit", minute: "2-digit" },
-                          )}
-                        </time>
-                        {mine && <FiCheck aria-label="Mensagem enviada" />}
+                      <div className="flex items-end gap-3">
+                        <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm leading-relaxed [overflow-wrap:anywhere]">
+                          {message.text}
+                        </p>
+                        <div
+                          className={`flex shrink-0 items-center gap-1 pb-0.5 text-[10px] ${mine ? "text-fuchsia-200" : "text-gray-500"}`}
+                        >
+                          <time dateTime={message.sentAt}>
+                            {new Date(message.sentAt).toLocaleTimeString(
+                              "pt-BR",
+                              { hour: "2-digit", minute: "2-digit" },
+                            )}
+                          </time>
+                          {mine && <FiCheck aria-label="Mensagem enviada" />}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -386,7 +420,10 @@ export default function MusicRoom() {
               Ir para as últimas mensagens ↓
             </button>
           )}
-          <form onSubmit={submit} className="border-t border-gray-800 p-4">
+          <form
+            onSubmit={submit}
+            className="shrink-0 border-t border-gray-800 p-3"
+          >
             {sendError && (
               <p
                 role="alert"
@@ -431,7 +468,7 @@ export default function MusicRoom() {
               <textarea
                 ref={inputRef}
                 id="room-message"
-                rows={2}
+                rows={1}
                 maxLength={800}
                 value={draft}
                 disabled={!active}
