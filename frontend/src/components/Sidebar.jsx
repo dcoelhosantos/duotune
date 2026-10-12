@@ -1,4 +1,4 @@
-import { FiHeadphones, FiHome, FiUsers } from "react-icons/fi";
+import { FiHeadphones, FiHome, FiUsers, FiLayers } from "react-icons/fi";
 import { Link, NavLink } from "react-router-dom";
 import { useRoom } from "../room/RoomContext";
 
@@ -8,6 +8,7 @@ export default function Sidebar() {
     !joined &&
     info &&
     snapshot?.onlineUserIds.some((id) => id !== info.currentUserId);
+
   return (
     <aside className="w-16 shrink-0 bg-gray-950 border-r border-gray-900 flex flex-col h-full p-3 md:w-64 md:p-6">
       <div className="text-xl md:text-3xl font-bold text-white mb-10">
@@ -58,6 +59,7 @@ export default function Sidebar() {
               )}
             </span>
           </NavLink>
+
           <NavLink
             to="/match"
             title="Match Musical"
@@ -67,6 +69,17 @@ export default function Sidebar() {
           >
             <FiUsers size={24} className="shrink-0" />
             <span className="sr-only md:not-sr-only">Match Musical</span>
+          </NavLink>
+
+          <NavLink
+            to="/fusion"
+            title="Playlist Fusion"
+            className={({ isActive }) =>
+              `flex items-center gap-4 rounded-xl px-3 py-3 -mx-3 font-medium transition-colors ${isActive ? "bg-fuchsia-500/10 text-fuchsia-300" : "text-gray-300 hover:bg-gray-900 hover:text-white"}`
+            }
+          >
+            <FiLayers size={24} className="shrink-0" />
+            <span className="sr-only md:not-sr-only">Playlist Fusion</span>
           </NavLink>
         </div>
       </nav>

@@ -18,6 +18,7 @@ import PlaylistDetails from "./pages/PlaylistDetails";
 import { PrivateRoute } from "./routes/PrivateRoute";
 import { InviteRoute } from "./routes/InviteRoute";
 import { PublicRoute } from "./routes/PublicRoute.jsx";
+import Fusion from "./pages/Fusion.jsx";
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
             <Route path="/match" element={<MusicalMatch />} />
             <Route path="/buscar" element={<Search />} />
             <Route path="/perfil" element={<Profile />} />
+            <Route path="/fusion" element={<Fusion />} />
             <Route element={<InviteRoute />}>
               <Route path="/convidar" element={<GenerateInvite />} />
               <Route path="/aceitar/:code?" element={<AcceptInvite />} />
