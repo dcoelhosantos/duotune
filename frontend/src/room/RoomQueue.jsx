@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { FiList, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
 import { spotifyApi } from "../spotify/api";
+import RoomPlaylists from "./RoomPlaylists";
 import { useRoom } from "./RoomContext";
 
 export default function RoomQueue() {
   const { snapshot, status, addTrack, removeTrack, playbackBusy } = useRoom();
+  const [showPlaylists, setShowPlaylists] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -60,7 +62,7 @@ export default function RoomQueue() {
     <section className="rounded-2xl border border-gray-800 bg-gray-950/60 p-5">
       <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold">
         <FiList className="text-fuchsia-400" /> Fila compartilhada ·{" "}
-        {snapshot?.queue?.length || 0}/30
+        {snapshot?.queue?.length || 0}/99
       </h2>
       <ol className="max-h-64 space-y-3 overflow-y-auto">
         {snapshot?.queue?.map((entry, index) => (
@@ -100,6 +102,19 @@ export default function RoomQueue() {
         <p className="mt-5 text-sm text-gray-400">
           A fila está vazia. Busque uma música e adicione para vocês.
         </p>
+      )}
+      <button
+        type="button"
+        disabled={!active || playbackBusy}
+        onClick={() => setShowPlaylists((value) => !value)}
+        aria-expanded={showPlaylists}
+        aria-haspopup="dialog"
+        className="mt-5 cursor-pointer rounded-lg border border-fuchsia-500/40 px-4 py-2 text-sm text-fuchsia-300 hover:bg-fuchsia-500/10 disabled:opacity-40"
+      >
+        Adicionar playlist à fila
+      </button>
+      {showPlaylists && (
+        <RoomPlaylists onClose={() => setShowPlaylists(false)} />
       )}
       <h3 className="mb-3 mt-6 border-t border-gray-800 pt-5 text-sm font-semibold">
         Adicionar músicas
@@ -151,7 +166,7 @@ export default function RoomQueue() {
                 <button
                   type="button"
                   disabled={
-                    !active || playbackBusy || snapshot?.queue?.length >= 30
+                    !active || playbackBusy || snapshot?.queue?.length >= 99
                   }
                   onClick={() => addTrack(track.id)}
                   aria-label={`Adicionar ${track.title} à fila`}

@@ -16,11 +16,16 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import AddToPlaylistModal from "../components/AddToPlaylistModal";
 import EditPlaylistModal from "../components/EditPlaylistModal"; // Importe o modal de edição
 import { playlistApi } from "../playlists/api";
+import { useRoom } from "../room/RoomContext";
+import RoomPlaylists from "../room/RoomPlaylists";
 import { useSpotify } from "../spotify/SpotifyContext";
 
 export default function PlaylistDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { status: roomStatus } = useRoom();
+  const roomConnected = roomStatus === "connected";
+  const [showRoomPlaylist, setShowRoomPlaylist] = useState(false);
   const {
     playPlaylist,
     playTrack,
@@ -210,9 +215,28 @@ export default function PlaylistDetails() {
                     >
                       <FiPlus size={18} /> Adicionar músicas
                     </Link>
-                    <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left cursor-pointer">
+                    <button
+                      type="button"
+                      disabled={!roomConnected}
+                      title={
+                        roomConnected
+                          ? "Selecionar músicas para a sala"
+                          : "Entre na sala musical para adicionar músicas à fila"
+                      }
+                      aria-haspopup="dialog"
+                      onClick={() => {
+                        setPlaylistMenuOpen(false);
+                        setShowRoomPlaylist(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 enabled:hover:bg-gray-800 transition-colors text-left cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                    >
                       <FiList size={18} /> Adicionar à fila
                     </button>
+                    {!roomConnected && (
+                      <p className="px-4 pb-2 text-xs text-gray-400">
+                        Entre na sala musical para adicionar músicas.
+                      </p>
+                    )}
                     <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left cursor-pointer">
                       <FiShare2 size={18} /> Compartilhar
                     </button>
@@ -363,6 +387,14 @@ export default function PlaylistDetails() {
           </div>
         )}
       </div>
+
+      {showRoomPlaylist && (
+        <RoomPlaylists
+          key={id}
+          initialPlaylist={playlist}
+          onClose={() => setShowRoomPlaylist(false)}
+        />
+      )}
 
       {trackForModal && (
         <AddToPlaylistModal

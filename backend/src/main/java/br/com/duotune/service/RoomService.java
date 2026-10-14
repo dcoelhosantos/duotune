@@ -28,6 +28,7 @@ public class RoomService {
     public record State(Long duoId, long version, List<Long> onlineUserIds, List<ChatMessage> messages,
                         List<QueueEntry> queue, Playback playback, List<ReadyUser> readyUsers, long serverTime) {}
     public record AddTrackRequest(String trackId) {}
+    public record AddPlaylistRequest(List<String> trackIds) {}
     public record PlaybackRequest(String action, Long positionMs, long revision) {}
     public record ReadyRequest(String clientId, boolean ready) {}
     private record ReadyLease(String clientId, long expiresAt) {}
@@ -48,6 +49,7 @@ public class RoomService {
     }
 
     private final SpotifyRoomCatalog catalog;
+    private final PlaylistService playlists;
     private final UserRepository users;
     private final DuoRepository duos;
     private final SimpMessagingTemplate messaging;
@@ -55,7 +57,8 @@ public class RoomService {
     private final Map<Long, Room> rooms = new ConcurrentHashMap<>();
     private final Map<String, Long> sessionRooms = new ConcurrentHashMap<>();
 
-    public RoomService(UserRepository users, DuoRepository duos, SimpMessagingTemplate messaging, StompAccessInterceptor access, SpotifyRoomCatalog catalog) {
+    public RoomService(UserRepository users, DuoRepository duos, SimpMessagingTemplate messaging, StompAccessInterceptor access, SpotifyRoomCatalog catalog, PlaylistService playlists) {
+        this.playlists = playlists;
         this.catalog = catalog;
         this.users = users; this.duos = duos; this.messaging = messaging; this.access = access;
     }
@@ -161,11 +164,55 @@ public class RoomService {
         var track = catalog.track(email, request.trackId());
         synchronized (room) {
             requireOnline(room, user.getId());
-            if (room.queue.size() >= 30) throw new ResponseStatusException(HttpStatus.CONFLICT, "A fila comporta até 30 músicas.");
+            if (room.queue.size() >= 99) throw new ResponseStatusException(HttpStatus.CONFLICT, "A fila comporta até 99 músicas.");
             room.queue.add(new QueueEntry(UUID.randomUUID().toString(), track, user.getId()));
             if (room.queue.size() == 1) playbackChanged(room, 0, false);
             return publish(id, room);
         }
+    }
+
+    public State addPlaylist(String email, Long playlistId, AddPlaylistRequest request) {
+        User user = user(email);
+        Long id = duoId(user);
+        Room room = rooms.computeIfAbsent(id, key -> new Room());
+        synchronized (room) { requireOnline(room, user.getId()); }
+
+        // Reutiliza a autorização de acesso do dono ou parceiro e a ordem da playlist.
+        var playlist = playlists.getPlaylistDetails(playlistId, email);
+        var tracks = playlist.tracks();
+        if (request != null && request.trackIds() != null) {
+            Set<String> selected = new HashSet<>(request.trackIds());
+            if (selected.isEmpty() || selected.contains(null) || selected.size() != request.trackIds().size()
+                    || !tracks.stream().map(item -> item.trackSpotifyId()).toList().containsAll(selected)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecione músicas válidas desta playlist. Atualize a prévia e tente novamente.");
+            }
+            tracks = tracks.stream().filter(item -> selected.contains(item.trackSpotifyId())).toList();
+        }
+        int count = tracks.size();
+        if (count == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta playlist está vazia.");
+        synchronized (room) { requirePlaylistCapacity(room, count); }
+
+        // Resolve todas as faixas antes de alterar a fila: falhas não deixam uma importação parcial.
+        List<QueueEntry> entries = new ArrayList<>();
+        for (var item : tracks) {
+            var track = catalog.track(email, item.trackSpotifyId());
+            entries.add(new QueueEntry(UUID.randomUUID().toString(), track, user.getId()));
+        }
+        if (!id.equals(duoId(user))) throw new ResponseStatusException(HttpStatus.CONFLICT, "Seu Duo mudou. Entre novamente na sala.");
+        synchronized (room) {
+            requireOnline(room, user.getId());
+            requirePlaylistCapacity(room, count);
+            boolean empty = room.queue.isEmpty();
+            room.queue.addAll(entries);
+            if (empty) playbackChanged(room, 0, false);
+            return publish(id, room);
+        }
+    }
+
+    private void requirePlaylistCapacity(Room room, int count) {
+        int available = 99 - room.queue.size();
+        if (count > available) throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "A seleção tem " + count + " músicas e restam " + available + " vagas na fila (limite de 99). Nenhuma música foi adicionada.");
     }
 
     public State removeTrack(String email, String entryId) {
