@@ -79,3 +79,25 @@ BEGIN
     END IF;
 END;
 $$;
+
+DO $$
+BEGIN
+    -- Serializa esta migração (usando a data de hoje como lock)
+    PERFORM pg_advisory_xact_lock(20261013, 1);
+    
+    IF NOT EXISTS (
+        SELECT 1 FROM duotune_schema_migrations
+        WHERE version = '20261013_remove_duos_unique_constraints'
+    ) THEN
+        IF to_regclass('duos') IS NOT NULL THEN
+            -- Remove as restrições (UNIQUE) criadas pelo OneToOne do Hibernate
+            ALTER TABLE duos DROP CONSTRAINT IF EXISTS uk9rwhs4c9q1co89nrb0ulmy9k0;
+            ALTER TABLE duos DROP CONSTRAINT IF EXISTS ukcedkff8491u4fyrj41vbf087s;
+        END IF;
+
+        -- Registra a migração
+        INSERT INTO duotune_schema_migrations(version)
+            VALUES ('20261013_remove_duos_unique_constraints');
+    END IF;
+END;
+$$;;

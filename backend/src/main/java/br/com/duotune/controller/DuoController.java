@@ -53,7 +53,8 @@ public class DuoController {
     }
 
     @PostMapping("/invitations")
-    public ResponseEntity<InvitationResponse> createInvitation(@Valid @RequestBody InvitationRequest request, Principal principal) {
+    public ResponseEntity<InvitationResponse> createInvitation(@Valid @RequestBody InvitationRequest request,
+            Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -92,6 +93,24 @@ public class DuoController {
         String authenticatedEmail = principal.getName();
         duoService.cancelInvitation(code, authenticatedEmail);
 
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<DuoResponse> getActiveDuo(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        DuoResponse response = duoService.getActiveDuo(principal.getName());
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/active")
+    public ResponseEntity<Void> terminateActiveDuo(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        duoService.terminateActiveDuo(principal.getName());
         return ResponseEntity.noContent().build();
     }
 }

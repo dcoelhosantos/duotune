@@ -12,12 +12,12 @@ public class Duo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user1_id", nullable = false)
     private User user1;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user2_id", nullable = false) // Mudei para false, pois um Duo só existe com 2 pessoas!
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user2_id", nullable = false) 
     private User user2;
 
     @Enumerated(EnumType.STRING)
@@ -27,7 +27,6 @@ public class Duo {
     @Column(name = "formed_at")
     private OffsetDateTime formedAt;
 
-    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public User getUser1() { return user1; }

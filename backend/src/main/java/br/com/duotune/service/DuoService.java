@@ -28,7 +28,9 @@ public class DuoService {
     private final EmailService emailService;
     private final EntityManager entityManager;
     private static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    public DuoService(DuoRepository duoRepository, InvitationRepository invitationRepository, UserRepository userRepository, EmailService emailService, EntityManager entityManager) {
+
+    public DuoService(DuoRepository duoRepository, InvitationRepository invitationRepository,
+            UserRepository userRepository, EmailService emailService, EntityManager entityManager) {
         this.duoRepository = duoRepository;
         this.invitationRepository = invitationRepository;
         this.userRepository = userRepository;
@@ -42,7 +44,8 @@ public class DuoService {
                 .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "Remetente não encontrado."));
 
         User recipient = userRepository.findByEmailIgnoreCase(request.email().trim())
-                .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "Destinatário não encontrado no sistema. Ele precisa se cadastrar primeiro."));
+                .orElseThrow(() -> new BusinessException("USER_NOT_FOUND",
+                        "Destinatário não encontrado no sistema. Ele precisa se cadastrar primeiro."));
 
         if (sender.getId().equals(recipient.getId())) {
             throw new BusinessException("SELF_INVITATION", "Você não pode enviar um convite para seu próprio e-mail.");
@@ -51,15 +54,19 @@ public class DuoService {
         userRepository.lockParticipants(List.of(sender.getId(), recipient.getId()));
 
         if (duoRepository.existsActiveDuo(sender.getId(), DuoStatus.ACTIVE)) {
-            throw new BusinessException("SENDER_ALREADY_PAIRED", "Você já possui um Duo e não pode enviar novos convites.");
+            throw new BusinessException("SENDER_ALREADY_PAIRED",
+                    "Você já possui um Duo e não pode enviar novos convites.");
         }
 
         if (duoRepository.existsActiveDuo(recipient.getId(), DuoStatus.ACTIVE)) {
-            throw new BusinessException("RECIPIENT_ALREADY_PAIRED", "Esta pessoa já possui um Duo e não pode receber convites.");
+            throw new BusinessException("RECIPIENT_ALREADY_PAIRED",
+                    "Esta pessoa já possui um Duo e não pode receber convites.");
         }
 
-        if (invitationRepository.existsBySenderIdAndStatusAndExpiresAtAfter(sender.getId(), InvitationStatus.PENDING, OffsetDateTime.now())) {
-            throw new BusinessException("INVITATION_ALREADY_EXISTS", "Você já tem um convite aguardando aceitação. Cancele-o ou aguarde sua expiração antes de enviar outro.");
+        if (invitationRepository.existsBySenderIdAndStatusAndExpiresAtAfter(sender.getId(), InvitationStatus.PENDING,
+                OffsetDateTime.now())) {
+            throw new BusinessException("INVITATION_ALREADY_EXISTS",
+                    "Você já tem um convite aguardando aceitação. Cancele-o ou aguarde sua expiração antes de enviar outro.");
         }
 
         Invitation invitation = new Invitation();
@@ -75,13 +82,14 @@ public class DuoService {
         try {
             emailService.sendInvitationEmail(recipient.getEmail(), sender.getName(), invitation.getCode());
         } catch (Exception e) {
-            System.err.println("Aviso: Convite gerado no banco, mas falha ao enviar o e-mail do Google: " + e.getMessage());
+            System.err.println(
+                    "Aviso: Convite gerado no banco, mas falha ao enviar o e-mail do Google: " + e.getMessage());
         }
 
         return new InvitationResponse(
-                new InvitationData(invitation.getId(), invitation.getCode(), invitation.getStatus(), invitation.getExpiresAt()),
-                new RecipientData(recipient.getName(), recipient.getEmail())
-        );
+                new InvitationData(invitation.getId(), invitation.getCode(), invitation.getStatus(),
+                        invitation.getExpiresAt()),
+                new RecipientData(recipient.getName(), recipient.getEmail()));
     }
 
     @Transactional
@@ -98,7 +106,8 @@ public class DuoService {
                 .orElseThrow(() -> new BusinessException("INVITATION_NOT_FOUND", "Convite não encontrado."));
 
         if (!invitation.getRecipient().getId().equals(authenticatedUser.getId())) {
-            throw new BusinessException("INVALID_INVITATION", "Este convite foi enviado para outra conta. Entre com o e-mail que recebeu o convite.");
+            throw new BusinessException("INVALID_INVITATION",
+                    "Este convite foi enviado para outra conta. Entre com o e-mail que recebeu o convite.");
         }
 
         userRepository.lockParticipants(List.of(invitation.getSender().getId(), authenticatedUser.getId()));
@@ -106,15 +115,22 @@ public class DuoService {
         validatePending(invitation);
 
         if (duoRepository.existsActiveDuo(authenticatedUser.getId(), DuoStatus.ACTIVE)) {
-            throw new BusinessException("RECIPIENT_ALREADY_PAIRED", "Você já possui um Duo e não pode aceitar outro convite.");
+            throw new BusinessException("RECIPIENT_ALREADY_PAIRED",
+                    "Você já possui um Duo e não pode aceitar outro convite.");
         }
         if (duoRepository.existsActiveDuo(invitation.getSender().getId(), DuoStatus.ACTIVE)) {
-            throw new BusinessException("SENDER_ALREADY_PAIRED", "Quem enviou este convite já formou um Duo. Este convite não pode mais ser aceito.");
+            throw new BusinessException("SENDER_ALREADY_PAIRED",
+                    "Quem enviou este convite já formou um Duo. Este convite não pode mais ser aceito.");
         }
 
-        Duo duo = new Duo();
-        duo.setUser1(invitation.getSender());
-        duo.setUser2(authenticatedUser);
+        Duo duo = duoRepository.findByUsers(invitation.getSender().getId(), authenticatedUser.getId())
+                .orElseGet(() -> {
+                    Duo newDuo = new Duo();
+                    newDuo.setUser1(invitation.getSender());
+                    newDuo.setUser2(authenticatedUser);
+                    return newDuo;
+                });
+
         duo.setStatus(DuoStatus.ACTIVE);
         duo.setFormedAt(OffsetDateTime.now());
         duo = duoRepository.save(duo);
@@ -122,8 +138,10 @@ public class DuoService {
         invitation.setStatus(InvitationStatus.ACCEPTED);
         invitationRepository.save(invitation);
 
-        UserResponse u1 = new UserResponse(duo.getUser1().getId(), duo.getUser1().getName(), duo.getUser1().getEmail(), duo.getUser1().getProfileImageUrl(), duo.getUser1().getCreatedAt(), duo.getId());
-        UserResponse u2 = new UserResponse(duo.getUser2().getId(), duo.getUser2().getName(), duo.getUser2().getEmail(), duo.getUser2().getProfileImageUrl(), duo.getUser2().getCreatedAt(), duo.getId());
+        UserResponse u1 = new UserResponse(duo.getUser1().getId(), duo.getUser1().getName(), duo.getUser1().getEmail(),
+                duo.getUser1().getProfileImageUrl(), duo.getUser1().getCreatedAt(), duo.getId());
+        UserResponse u2 = new UserResponse(duo.getUser2().getId(), duo.getUser2().getName(), duo.getUser2().getEmail(),
+                duo.getUser2().getProfileImageUrl(), duo.getUser2().getCreatedAt(), duo.getId());
 
         DuoData duoData = new DuoData(duo.getId(), duo.getStatus(), duo.getFormedAt(), List.of(u1, u2));
 
@@ -147,7 +165,8 @@ public class DuoService {
 
         userRepository.lockParticipants(List.of(invitation.getSender().getId(), invitation.getRecipient().getId()));
         entityManager.refresh(invitation, LockModeType.PESSIMISTIC_WRITE);
-        if (invitation.getStatus() == InvitationStatus.PENDING && !OffsetDateTime.now().isBefore(invitation.getExpiresAt())) {
+        if (invitation.getStatus() == InvitationStatus.PENDING
+                && !OffsetDateTime.now().isBefore(invitation.getExpiresAt())) {
             invitation.setStatus(InvitationStatus.EXPIRED);
             invitationRepository.save(invitation);
             return invitation.getStatus().name();
@@ -155,8 +174,9 @@ public class DuoService {
 
         if (invitation.getStatus() == InvitationStatus.PENDING
                 && (duoRepository.existsActiveDuo(invitation.getSender().getId(), DuoStatus.ACTIVE)
-                || duoRepository.existsActiveDuo(invitation.getRecipient().getId(), DuoStatus.ACTIVE))) {
-            throw new BusinessException("PARTICIPANT_ALREADY_PAIRED", "Um dos participantes já formou um Duo. Cancele este convite, pois ele não pode mais ser aceito.");
+                        || duoRepository.existsActiveDuo(invitation.getRecipient().getId(), DuoStatus.ACTIVE))) {
+            throw new BusinessException("PARTICIPANT_ALREADY_PAIRED",
+                    "Um dos participantes já formou um Duo. Cancele este convite, pois ele não pode mais ser aceito.");
         }
         return invitation.getStatus().name();
     }
@@ -192,14 +212,16 @@ public class DuoService {
         return invitationRepository.findFirstBySenderIdAndStatusAndExpiresAtAfterOrderBySentAtDesc(
                 sender.getId(), InvitationStatus.PENDING, OffsetDateTime.now())
                 .map(invitation -> new InvitationResponse(
-                        new InvitationData(invitation.getId(), invitation.getCode(), invitation.getStatus(), invitation.getExpiresAt()),
+                        new InvitationData(invitation.getId(), invitation.getCode(), invitation.getStatus(),
+                                invitation.getExpiresAt()),
                         new RecipientData(invitation.getRecipient().getName(), invitation.getRecipient().getEmail())))
                 .orElse(null);
     }
 
     private void validatePending(Invitation invitation) {
         if (invitation.getStatus() == InvitationStatus.CANCELLED) {
-            throw new BusinessException("INVITATION_CANCELLED", "Este convite foi cancelado. Peça um novo convite ao remetente.");
+            throw new BusinessException("INVITATION_CANCELLED",
+                    "Este convite foi cancelado. Peça um novo convite ao remetente.");
         }
         if (invitation.getStatus() == InvitationStatus.REJECTED) {
             throw new BusinessException("INVITATION_REJECTED", "Este convite foi recusado e não pode mais ser aceito.");
@@ -207,8 +229,10 @@ public class DuoService {
         if (invitation.getStatus() == InvitationStatus.ACCEPTED) {
             throw new BusinessException("INVITATION_ALREADY_USED", "Este convite já foi aceito.");
         }
-        if (invitation.getStatus() == InvitationStatus.EXPIRED || !OffsetDateTime.now().isBefore(invitation.getExpiresAt())) {
-            throw new BusinessException("INVITATION_EXPIRED", "Este convite expirou após 24 horas. Peça um novo convite ao remetente.");
+        if (invitation.getStatus() == InvitationStatus.EXPIRED
+                || !OffsetDateTime.now().isBefore(invitation.getExpiresAt())) {
+            throw new BusinessException("INVITATION_EXPIRED",
+                    "Este convite expirou após 24 horas. Peça um novo convite ao remetente.");
         }
     }
 
@@ -224,5 +248,36 @@ public class DuoService {
         } while (invitationRepository.findByCode(code).isPresent());
 
         return code;
+    }
+
+    @Transactional(readOnly = true)
+    public DuoResponse getActiveDuo(String authenticatedEmail) {
+        User user = userRepository.findByEmail(authenticatedEmail)
+                .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "Usuário não encontrado."));
+
+        Duo duo = duoRepository.findActiveDuoByUserId(user.getId())
+                .orElseThrow(() -> new BusinessException("DUO_NOT_FOUND", "Você não possui um Duo ativo no momento."));
+
+        UserResponse u1 = new UserResponse(duo.getUser1().getId(), duo.getUser1().getName(), duo.getUser1().getEmail(),
+                duo.getUser1().getProfileImageUrl(), duo.getUser1().getCreatedAt(), duo.getId());
+        UserResponse u2 = new UserResponse(duo.getUser2().getId(), duo.getUser2().getName(), duo.getUser2().getEmail(),
+                duo.getUser2().getProfileImageUrl(), duo.getUser2().getCreatedAt(), duo.getId());
+
+        DuoData duoData = new DuoData(duo.getId(), duo.getStatus(), duo.getFormedAt(), List.of(u1, u2));
+
+        return new DuoResponse(duoData);
+    }
+
+    @Transactional
+    public void terminateActiveDuo(String authenticatedEmail) {
+        User user = userRepository.findByEmail(authenticatedEmail)
+                .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "Usuário não encontrado."));
+
+        Duo duo = duoRepository.findActiveDuoByUserId(user.getId())
+                .orElseThrow(() -> new BusinessException("DUO_NOT_FOUND", "Você não possui um Duo ativo no momento."));
+
+        duo.setStatus(DuoStatus.ENDED);
+
+        duoRepository.save(duo);
     }
 }

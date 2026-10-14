@@ -39,7 +39,10 @@ const PlaylistCard = ({ pl }) => {
 
 export default function Home() {
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const hasDuo = !!storedUser.duoId;
+  const hasDuo =
+    storedUser.duoId !== null &&
+    storedUser.duoId !== undefined &&
+    storedUser.duoId !== "null";
 
   const [apiPlaylists, setApiPlaylists] = useState([]);
   const [duoPlaylists, setDuoPlaylists] = useState([]);
@@ -86,6 +89,26 @@ export default function Home() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-10 pb-8">
+      {!hasDuo && (
+        <div className="bg-gradient-to-r from-fuchsia-700 to-purple-900 rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between shadow-lg border border-fuchsia-500/30">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Encontre sua dupla! 🎵
+            </h2>
+            <p className="text-purple-200">
+              Você ainda não formou o seu Duo. Convide alguém especial para
+              compartilhar e mesclar sua trilha sonora.
+            </p>
+          </div>
+          <Link
+            to="/convidar"
+            className="mt-6 md:mt-0 bg-white text-fuchsia-700 px-6 py-3 rounded-full font-bold hover:bg-gray-100 transition-colors flex items-center gap-2 shadow-md hover:scale-105"
+          >
+            <FiUserPlus size={20} /> Convidar agora
+          </Link>
+        </div>
+      )}
+
       <section aria-labelledby="library-title">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>

@@ -28,4 +28,7 @@ public interface DuoRepository extends JpaRepository<Duo, Long> {
 
     @Query("SELECT d FROM Duo d WHERE (d.user1.id = :userId OR d.user2.id = :userId) AND d.status = 'ACTIVE'")
     Optional<Duo> findActiveDuoByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT d FROM Duo d WHERE (d.user1.id = :user1Id AND d.user2.id = :user2Id) OR (d.user1.id = :user2Id AND d.user2.id = :user1Id)")
+    Optional<Duo> findByUsers(@Param("user1Id") Long user1Id, @Param("user2Id") Long user2Id);
 }
