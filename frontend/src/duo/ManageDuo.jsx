@@ -90,9 +90,9 @@ export default function ManageDuo() {
       </div>
 
       {/* Perfis Lado a Lado */}
-      <div className="flex flex-col md:flex-row items-center justify-center gap-8 bg-gray-900/50 border border-gray-800 rounded-2xl p-10 mb-10 relative">
-        <div className="flex flex-col items-center">
-          <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center border-4 border-fuchsia-500/30 mb-4 shadow-lg overflow-hidden">
+      <div className="flex flex-col md:flex-row items-start justify-center gap-4 bg-gray-900/50 border border-gray-800 rounded-2xl p-10 mb-10 relative">
+        <div className="flex flex-col items-center flex-1 w-full px-2">
+          <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center border-4 border-fuchsia-500/30 mb-4 shadow-lg overflow-hidden shrink-0">
             {me.profileImageUrl ? (
               <img
                 src={me.profileImageUrl}
@@ -103,18 +103,20 @@ export default function ManageDuo() {
               <FiUser size={40} className="text-gray-400" />
             )}
           </div>
-          <h3 className="text-xl font-bold text-white">{me.name}</h3>
-          <span className="text-xs text-fuchsia-400 font-semibold uppercase tracking-widest mt-1">
+          <h3 className="text-xl font-bold text-white text-center break-words w-full">
+            {me.name}
+          </h3>
+          <span className="text-xs text-fuchsia-400 font-semibold uppercase tracking-widest mt-1 text-center">
             Você
           </span>
         </div>
 
-        <div className="hidden md:flex items-center justify-center">
+        <div className="hidden md:flex items-center justify-center shrink-0 mt-8">
           <FiHeart size={32} className="text-fuchsia-500 animate-pulse" />
         </div>
 
-        <div className="flex flex-col items-center">
-          <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center border-4 border-blue-500/30 mb-4 shadow-lg overflow-hidden">
+        <div className="flex flex-col items-center flex-1 w-full px-2">
+          <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center border-4 border-fuchsia-500/30 mb-4 shadow-lg overflow-hidden shrink-0">
             {partner.profileImageUrl ? (
               <img
                 src={partner.profileImageUrl}
@@ -125,8 +127,10 @@ export default function ManageDuo() {
               <FiUser size={40} className="text-gray-400" />
             )}
           </div>
-          <h3 className="text-xl font-bold text-white">{partner.name}</h3>
-          <span className="text-xs text-blue-400 font-semibold uppercase tracking-widest mt-1">
+          <h3 className="text-xl font-bold text-white text-center break-words w-full">
+            {partner.name}
+          </h3>
+          <span className="text-xs text-fuchsia-400 font-semibold uppercase tracking-widest mt-1 text-center">
             Sua Dupla
           </span>
         </div>
