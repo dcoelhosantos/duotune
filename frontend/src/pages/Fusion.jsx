@@ -49,9 +49,9 @@ export default function Fusion() {
     setSelectedMyPlaylist(pl);
     if (error) setError("");
 
-    // Se a playlist do Duo já estiver selecionada, monta o nome e rola a tela
     if (selectedDuoPlaylist) {
-      setFusionName(`Fusão: ${pl.name} & ${selectedDuoPlaylist.name}`);
+      const rawName = `Fusão: ${pl.name} & ${selectedDuoPlaylist.name}`;
+      setFusionName(rawName.substring(0, 100));
       setTimeout(
         () =>
           bottomRef.current?.scrollIntoView({
@@ -67,9 +67,9 @@ export default function Fusion() {
     setSelectedDuoPlaylist(pl);
     if (error) setError("");
 
-    // Se a sua playlist já estiver selecionada, monta o nome e rola a tela
     if (selectedMyPlaylist) {
-      setFusionName(`Fusão: ${selectedMyPlaylist.name} & ${pl.name}`);
+      const rawName = `Fusão: ${selectedMyPlaylist.name} & ${pl.name}`;
+      setFusionName(rawName.substring(0, 100));
       setTimeout(
         () =>
           bottomRef.current?.scrollIntoView({
@@ -82,6 +82,11 @@ export default function Fusion() {
   };
 
   const handleCreateFusion = async (e) => {
+    if (fusionName.trim().length > 100) {
+      setError("O nome da playlist não pode exceder 100 caracteres.");
+      return;
+    }
+
     e.preventDefault();
     if (!selectedMyPlaylist || !selectedDuoPlaylist) {
       setError("Selecione uma playlist sua e uma do seu Duo para continuar.");
@@ -110,8 +115,8 @@ export default function Fusion() {
       const formatTracks = (tracks) =>
         tracks.map((t) => ({
           trackSpotifyId: t.trackSpotifyId,
-          title: t.title,
-          artist: t.artist,
+          title: t.title?.trim() || `Faixa ${t.trackSpotifyId}`,
+          artist: t.artist?.trim() || "Artista desconhecido",
           imageUrl: t.imageUrl,
         }));
 
@@ -292,6 +297,7 @@ export default function Fusion() {
           <input
             type="text"
             required
+            maxLength={100}
             value={fusionName}
             onChange={(e) => {
               setFusionName(e.target.value);
