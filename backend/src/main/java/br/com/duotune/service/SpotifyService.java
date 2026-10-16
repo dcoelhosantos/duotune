@@ -1,5 +1,7 @@
 package br.com.duotune.service;
 
+import br.com.duotune.model.TrackMetadata;
+import br.com.duotune.repository.TrackMetadataRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +21,12 @@ import br.com.duotune.dto.TrackResponseDTO;
 
 @Service
 public class SpotifyService {
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SpotifyService.class);
+    private final TrackMetadataRepository metadata;
+
+    public SpotifyService(TrackMetadataRepository metadata) {
+        this.metadata = metadata;
+    }
 
     @Value("${spotify.client.id}")
     private String clientId;
@@ -64,6 +72,7 @@ public class SpotifyService {
         Map<String, Object> tracksNode = (Map<String, Object>) body.get("tracks");
         List<Map<String, Object>> items = (List<Map<String, Object>>) tracksNode.get("items");
 
+        var durations = new ArrayList<TrackMetadata>();
         for (Map<String, Object> item : items) {
             String id = item.get("id").toString();
             String title = item.get("name").toString();
@@ -88,9 +97,19 @@ public class SpotifyService {
                 ? previewObj.toString() 
                 : null;
 
+            if (!Boolean.FALSE.equals(item.get("is_playable"))
+                    && item.get("duration_ms") instanceof Number duration && duration.longValue() > 0) {
+                durations.add(new TrackMetadata(id, duration.longValue()));
+            }
             tracks.add(new TrackResponseDTO(id, title, artist, imageUrl, previewUrl));
         }
 
+        try {
+            metadata.saveAll(durations);
+        } catch (org.springframework.dao.DataAccessException error) {
+            // A persistência é uma otimização: não deve impedir a entrega da busca.
+            logger.warn("Não foi possível guardar as durações da busca do Spotify.", error);
+        }
         return tracks;
     }
 }

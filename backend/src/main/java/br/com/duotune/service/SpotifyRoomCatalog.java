@@ -35,6 +35,9 @@ public class SpotifyRoomCatalog {
                 return result;
             } catch (HttpClientErrorException.Unauthorized error) {
                 if (attempt == 1) throw new ResponseStatusException(HttpStatus.CONFLICT, "Reconecte o Spotify no perfil.");
+            } catch (HttpClientErrorException.TooManyRequests error) {
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                        "O Spotify recebeu muitas solicitações. Aguarde um pouco e tente novamente.");
             } catch (RestClientException error) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Não foi possível consultar o Spotify. Tente novamente.");
             }

@@ -195,7 +195,7 @@ public class RoomService {
         // Resolve todas as faixas antes de alterar a fila: falhas não deixam uma importação parcial.
         List<QueueEntry> entries = new ArrayList<>();
         for (var item : tracks) {
-            var track = catalog.track(email, item.trackSpotifyId());
+            var track = playlists.resolveRoomTrack(playlistId, item, email);
             entries.add(new QueueEntry(UUID.randomUUID().toString(), track, user.getId()));
         }
         if (!id.equals(duoId(user))) throw new ResponseStatusException(HttpStatus.CONFLICT, "Seu Duo mudou. Entre novamente na sala.");

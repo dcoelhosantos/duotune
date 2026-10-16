@@ -8,5 +8,6 @@ public record PlaylistTrackResponse(
         OffsetDateTime addedAt,
         String title,
         String artist,
-        String imageUrl) {
+        String imageUrl,
+        Long durationMs) {
 }
