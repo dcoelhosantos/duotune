@@ -150,7 +150,8 @@ public class PlaylistService {
                 playlist.getIsFusion(),
                 playlist.getCreatedAt(),
                 trackResponses,
-                playlist.getDescription());
+                playlist.getDescription(),
+                playlist.getUser().getId());
     }
 
     @Transactional
