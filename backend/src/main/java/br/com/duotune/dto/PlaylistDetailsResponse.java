@@ -9,5 +9,6 @@ public record PlaylistDetailsResponse(
     Boolean isFusion,
     OffsetDateTime createdAt,
     List<PlaylistTrackResponse> tracks,
-    String description
+    String description,
+    Long ownerId
 ) {}

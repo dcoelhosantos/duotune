@@ -9,12 +9,11 @@ import {
   FiPause,
   FiPlay,
   FiPlus,
-  FiShare2,
   FiTrash2,
 } from "react-icons/fi";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AddToPlaylistModal from "../components/AddToPlaylistModal";
-import EditPlaylistModal from "../components/EditPlaylistModal"; // Importe o modal de edição
+import EditPlaylistModal from "../components/EditPlaylistModal"; 
 import { playlistApi } from "../playlists/api";
 import { useRoom } from "../room/RoomContext";
 import RoomPlaylists from "../room/RoomPlaylists";
@@ -44,6 +43,13 @@ export default function PlaylistDetails() {
   const [trackMenuOpenId, setTrackMenuOpenId] = useState(null);
   const [trackForModal, setTrackForModal] = useState(null);
   const [isEditing, setIsEditing] = useState(false); // Controle do modal de edição
+
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+  const isOwner =
+    playlist && storedUser.id
+      ? String(playlist.ownerId) === String(storedUser.id)
+      : false;
 
   useEffect(() => {
     let active = true;
@@ -143,7 +149,7 @@ export default function PlaylistDetails() {
             )}
           </div>
 
-          <div className="flex flex-col gap-3 w-full">
+          <div className="flex flex-col gap-3 w-full min-w-0">
             <p className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
               Playlist Pública
             </p>
@@ -191,12 +197,14 @@ export default function PlaylistDetails() {
                 )}
               </button>
 
-              <button
-                onClick={() => setIsEditing(true)}
-                className="w-10 h-10 rounded-full border border-gray-500 text-white flex items-center justify-center hover:bg-gray-800 transition-colors cursor-pointer"
-              >
-                <FiEdit2 size={18} />
-              </button>
+              {isOwner && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="w-10 h-10 rounded-full border border-gray-500 text-white flex items-center justify-center hover:bg-gray-800 transition-colors cursor-pointer"
+                >
+                  <FiEdit2 size={18} />
+                </button>
+              )}
 
               <div className="relative z-50">
                 <button
@@ -208,13 +216,16 @@ export default function PlaylistDetails() {
 
                 {playlistMenuOpen && (
                   <div className="absolute left-0 mt-2 w-56 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-2 text-sm text-gray-300">
-                    <Link
-                      to="/buscar"
-                      state={{ autoFocus: true }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left cursor-pointer"
-                    >
-                      <FiPlus size={18} /> Adicionar músicas
-                    </Link>
+                    {isOwner && (
+                      <Link
+                        to="/buscar"
+                        state={{ autoFocus: true }}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left cursor-pointer"
+                      >
+                        <FiPlus size={18} /> Adicionar músicas
+                      </Link>
+                    )}
+
                     <button
                       type="button"
                       disabled={!roomConnected}
@@ -232,21 +243,24 @@ export default function PlaylistDetails() {
                     >
                       <FiList size={18} /> Adicionar à fila
                     </button>
+
                     {!roomConnected && (
                       <p className="px-4 pb-2 text-xs text-gray-400">
                         Entre na sala musical para adicionar músicas.
                       </p>
                     )}
-                    <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left cursor-pointer">
-                      <FiShare2 size={18} /> Compartilhar
-                    </button>
-                    <div className="h-px bg-gray-700 my-1"></div>
-                    <button
-                      onClick={handleDeletePlaylist}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left text-red-400 cursor-pointer"
-                    >
-                      <FiTrash2 size={18} /> Excluir playlist
-                    </button>
+
+                    {isOwner && (
+                      <>
+                        <div className="h-px bg-gray-700 my-1"></div>
+                        <button
+                          onClick={handleDeletePlaylist}
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left text-red-400 cursor-pointer"
+                        >
+                          <FiTrash2 size={18} /> Excluir playlist
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -269,13 +283,15 @@ export default function PlaylistDetails() {
         {playlist.tracks.length === 0 ? (
           <div className="text-center text-gray-400 py-20 space-y-6">
             <p className="text-lg">Esta playlist ainda não tem músicas.</p>
-            <Link
-              to="/buscar"
-              state={{ autoFocus: true }}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left cursor-pointer"
-            >
-              <FiPlus size={18} /> Buscar Músicas
-            </Link>
+            {isOwner && (
+              <Link
+                to="/buscar"
+                state={{ autoFocus: true }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left cursor-pointer"
+              >
+                <FiPlus size={18} /> Buscar Músicas
+              </Link>
+            )}
           </div>
         ) : (
           <div className="space-y-1">
@@ -371,14 +387,19 @@ export default function PlaylistDetails() {
                         <FiPlus size={18} /> Salvar na playlist
                       </button>
 
-                      <div className="h-px bg-gray-700 my-1"></div>
-
-                      <button
-                        onClick={() => handleRemoveTrack(track.trackSpotifyId)}
-                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left text-red-400 cursor-pointer"
-                      >
-                        <FiTrash2 size={18} /> Remover da playlist
-                      </button>
+                      {isOwner && (
+                        <>
+                          <div className="h-px bg-gray-700 my-1"></div>
+                          <button
+                            onClick={() =>
+                              handleRemoveTrack(track.trackSpotifyId)
+                            }
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left text-red-400 cursor-pointer"
+                          >
+                            <FiTrash2 size={18} /> Remover da playlist
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
