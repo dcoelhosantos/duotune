@@ -10,14 +10,16 @@ import {
   FiPlay,
   FiPlus,
   FiTrash2,
+  FiGift,
 } from "react-icons/fi";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AddToPlaylistModal from "../components/AddToPlaylistModal";
-import EditPlaylistModal from "../components/EditPlaylistModal"; 
+import EditPlaylistModal from "../components/EditPlaylistModal";
 import { playlistApi } from "../playlists/api";
 import { useRoom } from "../room/RoomContext";
 import RoomPlaylists from "../room/RoomPlaylists";
 import { useSpotify } from "../spotify/SpotifyContext";
+import DedicateTrackModal from "../components/DedicateTrackModal";
 
 export default function PlaylistDetails() {
   const { id } = useParams();
@@ -42,7 +44,8 @@ export default function PlaylistDetails() {
   const [playlistMenuOpen, setPlaylistMenuOpen] = useState(false);
   const [trackMenuOpenId, setTrackMenuOpenId] = useState(null);
   const [trackForModal, setTrackForModal] = useState(null);
-  const [isEditing, setIsEditing] = useState(false); // Controle do modal de edição
+  const [isEditing, setIsEditing] = useState(false); 
+  const [trackForDedication, setTrackForDedication] = useState(null);
 
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -387,6 +390,21 @@ export default function PlaylistDetails() {
                         <FiPlus size={18} /> Salvar na playlist
                       </button>
 
+                      <button
+                        onClick={() => {
+                          setTrackForDedication({
+                            id: track.trackSpotifyId,
+                            title: track.title,
+                            artist: track.artist,
+                            imageUrl: track.imageUrl,
+                          });
+                          setTrackMenuOpenId(null);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left text-fuchsia-400 cursor-pointer"
+                      >
+                        <FiGift size={18} /> Dedicar ao Duo
+                      </button>
+
                       {isOwner && (
                         <>
                           <div className="h-px bg-gray-700 my-1"></div>
@@ -421,6 +439,13 @@ export default function PlaylistDetails() {
         <AddToPlaylistModal
           track={trackForModal}
           onClose={() => setTrackForModal(null)}
+        />
+      )}
+
+      {trackForDedication && (
+        <DedicateTrackModal
+          track={trackForDedication}
+          onClose={() => setTrackForDedication(null)}
         />
       )}
 

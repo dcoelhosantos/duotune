@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
-import { FiMusic, FiPlus, FiUserPlus } from "react-icons/fi";
+import {
+  FiMusic,
+  FiPlus,
+  FiUserPlus,
+  FiPlay,
+  FiGift,
+  FiX,
+} from "react-icons/fi";
 import { Link } from "react-router-dom";
 import CreatePlaylistModal from "../components/CreatePlaylistModal";
 import { playlistApi } from "../playlists/api";
+import { duoApi } from "../duo/api";
+import { useSpotify } from "../spotify/SpotifyContext";
 
 const PlaylistCard = ({ pl }) => {
   const [failedCover, setFailedCover] = useState(null);
@@ -49,6 +58,24 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const { playTrack, busy } = useSpotify();
+  const [surpriseTrack, setSurpriseTrack] = useState(null);
+  const [showSurpriseModal, setShowSurpriseModal] = useState(false);
+
+  useEffect(() => {
+    if (hasDuo) {
+      duoApi("/dedications/pending")
+        .then((data) => {
+          if (data) {
+            setSurpriseTrack(data);
+            setShowSurpriseModal(true);
+          }
+        })
+        .catch(() => {
+        });
+    }
+  }, [hasDuo]);
 
   const fetchPlaylistsManually = async () => {
     setLoading(true);
@@ -208,6 +235,68 @@ export default function Home() {
             fetchPlaylistsManually();
           }}
         />
+      )}
+
+      {showSurpriseModal && surpriseTrack && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md transition-opacity">
+          <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-fuchsia-500/30 bg-gray-900 shadow-[0_0_50px_rgba(217,70,239,0.15)] text-center">
+            <button
+              onClick={() => setShowSurpriseModal(false)}
+              className="absolute right-4 top-4 text-gray-400 hover:text-white z-10"
+            >
+              <FiX size={24} />
+            </button>
+
+            <div className="bg-gradient-to-b from-fuchsia-900/40 to-transparent p-8 pt-10">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-fuchsia-500/20 text-fuchsia-400">
+                <FiGift size={32} />
+              </div>
+              <h2 className="mb-2 text-2xl font-bold text-white">
+                Surpresa do seu Duo!
+              </h2>
+              <p className="text-sm text-gray-300">
+                Sua dupla programou uma música especial para o seu dia de hoje.
+              </p>
+            </div>
+
+            <div className="px-8 pb-8">
+              <div className="mb-6 flex flex-col items-center gap-3">
+                <div className="h-32 w-32 overflow-hidden rounded-lg shadow-lg">
+                  {surpriseTrack.imageUrl ? (
+                    <img
+                      src={surpriseTrack.imageUrl}
+                      alt="Capa"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gray-800">
+                      <FiMusic className="text-gray-500 text-4xl" />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-white truncate w-56">
+                    {surpriseTrack.title}
+                  </p>
+                  <p className="text-sm text-gray-400 truncate w-56">
+                    {surpriseTrack.artist}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  playTrack(surpriseTrack);
+                  setShowSurpriseModal(false);
+                }}
+                disabled={busy}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-fuchsia-600 py-3 font-bold text-white hover:bg-fuchsia-500 transition-colors disabled:opacity-50"
+              >
+                <FiPlay size={18} className="fill-current" /> Ouvir Agora
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
