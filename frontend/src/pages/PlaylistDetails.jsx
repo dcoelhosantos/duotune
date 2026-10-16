@@ -111,10 +111,6 @@ export default function PlaylistDetails() {
   if (error) return <div className="text-red-400 p-8">{error}</div>;
   if (!playlist) return null;
 
-  console.log("=== DEBUG DA PLAYLIST ===");
-  console.log("Dados da Playlist recebidos:", playlist);
-  console.log("Meu ID logado:", storedUser.id);
-
   const coverImage =
     playlist.tracks.length > 0 ? playlist.tracks[0].imageUrl : null;
 
