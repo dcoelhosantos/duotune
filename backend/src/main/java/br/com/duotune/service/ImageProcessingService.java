@@ -53,4 +53,46 @@ public class ImageProcessingService {
             }
         }
     }
+
+    // Redimensiona sem recortar para preservar o enquadramento das fotos do álbum.
+    public String createMemoryImage(MultipartFile file) throws IOException {
+        if (file.isEmpty() || file.getSize() > 10 * 1024 * 1024) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha uma imagem de até 10 MB.");
+        }
+        try (var stream = file.getInputStream();
+                var input = ImageIO.createImageInputStream(stream)) {
+            var readers = ImageIO.getImageReaders(input);
+            if (!readers.hasNext()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use uma imagem JPG ou PNG válida.");
+            var reader = readers.next();
+            try {
+                reader.setInput(input);
+                String format = reader.getFormatName();
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                if (!(format.equalsIgnoreCase("jpeg") || format.equalsIgnoreCase("png")) ||
+                        (long) width * height > 24000000) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use JPG ou PNG de até 24 megapixels.");
+                }
+
+                var original = reader.read(0);
+                double scale = Math.min(1d, Math.min(1600d / width, 1200d / height));
+                int outputWidth = Math.max(1, (int) Math.round(width * scale));
+                int outputHeight = Math.max(1, (int) Math.round(height * scale));
+                var resized = new BufferedImage(outputWidth, outputHeight, BufferedImage.TYPE_INT_RGB);
+                var graphics = resized.createGraphics();
+                graphics.setColor(java.awt.Color.WHITE);
+                graphics.fillRect(0, 0, outputWidth, outputHeight);
+                graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+                graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                graphics.drawImage(original, 0, 0, outputWidth, outputHeight, null);
+                graphics.dispose();
+
+                var output = new ByteArrayOutputStream();
+                ImageIO.write(resized, "jpg", output);
+                return "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(output.toByteArray());
+            } finally {
+                reader.dispose();
+            }
+        }
+    }
 }
