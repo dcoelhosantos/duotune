@@ -101,3 +101,5 @@ BEGIN
     END IF;
 END;
 $$;;
+-- Preserva playlists existentes; a duração é preenchida a partir de dados do Spotify.
+ALTER TABLE IF EXISTS playlist_tracks ADD COLUMN IF NOT EXISTS duration_ms bigint;;

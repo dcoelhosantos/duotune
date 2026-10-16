@@ -199,6 +199,7 @@ export function useRoomPlayback(room) {
       setPlaybackError("");
       try {
         updateSnapshot(await roomApi(path, options));
+        return true;
       } catch (error) {
         setPlaybackError(error.message);
         if (error.status === 409) {
@@ -209,6 +210,7 @@ export function useRoomPlayback(room) {
             /* Keep the original error. */
           }
         }
+        return false;
       } finally {
         commandPending.current = false;
         setPlaybackBusy(false);
@@ -264,6 +266,11 @@ export function useRoomPlayback(room) {
     control,
     addTrack: (trackId) =>
       mutate("/queue", { method: "POST", body: JSON.stringify({ trackId }) }),
+    addPlaylist: (playlistId, trackIds) =>
+      mutate(`/queue/playlists/${playlistId}`, {
+        method: "POST",
+        body: JSON.stringify({ trackIds }),
+      }),
     removeTrack: (entryId) => mutate(`/queue/${entryId}`, { method: "DELETE" }),
   };
 }

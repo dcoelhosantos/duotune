@@ -26,6 +26,19 @@ public class RoomController {
         return rooms.addTrack(principal.getName(), request);
     }
 
+    @PostMapping("/queue/playlists/{playlistId}")
+    public RoomService.State addPlaylist(Principal principal, @PathVariable Long playlistId,
+                                         @RequestBody(required = false) RoomService.AddPlaylistRequest request) {
+        return rooms.addPlaylist(principal.getName(), playlistId, request);
+    }
+
+    @ExceptionHandler(br.com.duotune.exception.BusinessException.class)
+    public ResponseEntity<ErrorResponse> playlistError(br.com.duotune.exception.BusinessException error) {
+        int status = "UNAUTHORIZED_ACTION".equals(error.getCode()) ? 403
+                : "PLAYLIST_NOT_FOUND".equals(error.getCode()) ? 404 : 400;
+        return ResponseEntity.status(status).body(new ErrorResponse(error.getCode(), error.getMessage()));
+    }
+
     @DeleteMapping("/queue/{entryId}")
     public RoomService.State removeTrack(Principal principal, @PathVariable String entryId) {
         return rooms.removeTrack(principal.getName(), entryId);

@@ -39,6 +39,9 @@ public class PlaylistTrack {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @Column(name = "duration_ms")
+    private Long durationMs;
+
     public void setTitle(String title) {
         this.title = title;
     }
@@ -51,6 +54,10 @@ public class PlaylistTrack {
         this.imageUrl = imageUrl;
     }
 
+    public void setDurationMs(Long durationMs) {
+        this.durationMs = durationMs;
+    }
+
     public String getTitle() {
         return title;
     }
@@ -61,6 +68,10 @@ public class PlaylistTrack {
 
     public String getImageUrl() {
         return imageUrl;
+    }
+
+    public Long getDurationMs() {
+        return durationMs;
     }
 
     public PlaylistTrack() {
