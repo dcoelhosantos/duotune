@@ -40,7 +40,7 @@ public class DuoDedicationService {
         User receiver = duo.getUser1().getId().equals(sender.getId()) ? duo.getUser2() : duo.getUser1();
 
         // Só permite datas de amanhã em diante
-        if (!request.scheduledDate().isAfter(LocalDate.now())) {
+        if (!request.scheduledDate().isAfter(LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo")))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A data da surpresa deve ser no futuro.");
         }
 
@@ -64,10 +64,10 @@ public class DuoDedicationService {
         // Procura se tem alguma surpresa agendada pra hoje (ou atrasada) não entregue
         var optDedication = dedicationRepository
                 .findFirstByReceiverIdAndDeliveredFalseAndScheduledDateLessThanEqualOrderByScheduledDateAsc(
-                        receiver.getId(), LocalDate.now());
+                        receiver.getId(), LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo")));
 
         if (optDedication.isEmpty()) {
-            return null; 
+            return null;
         }
 
         DuoDedication dedication = optDedication.get();
