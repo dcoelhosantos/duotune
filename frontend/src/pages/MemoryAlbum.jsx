@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiArrowLeft,
   FiArrowRight,
@@ -46,6 +46,7 @@ export default function MemoryAlbum() {
   const [searching, setSearching] = useState(false);
   const [memoryToDelete, setMemoryToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const mutationInProgress = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -96,18 +97,19 @@ export default function MemoryAlbum() {
   }
 
   async function saveMemory() {
-    if (!image || !selectedTrack || saving) return;
+    if (!image || !selectedTrack || mutationInProgress.current) return;
+    mutationInProgress.current = true;
     setSaving(true);
     setError("");
-    const form = new FormData();
-    form.append("image", image);
-    form.append("trackSpotifyId", selectedTrack.id);
-    form.append("trackTitle", selectedTrack.title);
-    form.append("trackArtist", selectedTrack.artist);
-    if (selectedTrack.imageUrl)
-      form.append("trackImageUrl", selectedTrack.imageUrl);
-
     try {
+      const form = new FormData();
+      form.append("image", image);
+      form.append("trackSpotifyId", selectedTrack.id);
+      form.append("trackTitle", selectedTrack.title);
+      form.append("trackArtist", selectedTrack.artist);
+      if (selectedTrack.imageUrl)
+        form.append("trackImageUrl", selectedTrack.imageUrl);
+
       const created = await memoriesApi("", { method: "POST", body: form });
       setMemories((items) => [...items, created]);
       setCurrentIndex(memories.length);
@@ -115,12 +117,14 @@ export default function MemoryAlbum() {
     } catch (err) {
       setError(err.message);
     } finally {
+      mutationInProgress.current = false;
       setSaving(false);
     }
   }
 
   async function removeMemory() {
-    if (!memoryToDelete || deleting) return;
+    if (!memoryToDelete || mutationInProgress.current) return;
+    mutationInProgress.current = true;
     setError("");
     const removedIndex = memories.findIndex(
       (item) => item.id === memoryToDelete.id,
@@ -139,6 +143,7 @@ export default function MemoryAlbum() {
     } catch (err) {
       setError(err.message);
     } finally {
+      mutationInProgress.current = false;
       setDeleting(false);
     }
   }
@@ -154,9 +159,11 @@ export default function MemoryAlbum() {
 
   function navigateTo(index) {
     const next = memories[index];
-    if (!next) return;
+    if (!next || busy) return;
     setCurrentIndex(index);
-    void playTrack({ id: next.trackSpotifyId });
+    const alreadyPlaying =
+      currentTrack?.id === next.trackSpotifyId && isPlaying;
+    if (!alreadyPlaying) void playTrack({ id: next.trackSpotifyId });
   }
 
   function step(direction) {
@@ -181,7 +188,7 @@ export default function MemoryAlbum() {
         <button
           type="button"
           onClick={() => navigate("/convidar")}
-          className="mt-6 rounded-xl bg-fuchsia-600 px-5 py-3 font-semibold hover:bg-fuchsia-500"
+          className="mt-6 cursor-pointer rounded-xl bg-fuchsia-600 px-5 py-3 font-semibold transition-colors hover:bg-fuchsia-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400"
         >
           Convidar minha dupla
         </button>
@@ -209,7 +216,7 @@ export default function MemoryAlbum() {
             setShowForm(true);
             setError("");
           }}
-          className="inline-flex items-center gap-2 rounded-xl bg-fuchsia-600 px-5 py-3 text-sm font-semibold hover:bg-fuchsia-500"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-fuchsia-600 px-5 py-3 text-sm font-semibold transition-colors hover:bg-fuchsia-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400"
         >
           <FiPlus /> Adicionar memória
         </button>
@@ -237,7 +244,7 @@ export default function MemoryAlbum() {
               type="button"
               onClick={resetForm}
               aria-label="Fechar"
-              className="rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-white"
+              className="cursor-pointer rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400"
             >
               <FiX />
             </button>
@@ -281,7 +288,7 @@ export default function MemoryAlbum() {
                 type="submit"
                 disabled={searching || !trackQuery.trim()}
                 aria-label="Buscar música"
-                className="rounded-xl bg-gray-800 px-4 text-fuchsia-300 hover:bg-gray-700 disabled:opacity-40"
+                className="cursor-pointer rounded-xl bg-gray-800 px-4 text-fuchsia-300 transition-colors hover:bg-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <FiSearch />
               </button>
@@ -330,8 +337,8 @@ export default function MemoryAlbum() {
           <button
             type="button"
             onClick={() => void saveMemory()}
-            disabled={!image || !selectedTrack || saving}
-            className="rounded-xl bg-fuchsia-600 px-5 py-3 text-sm font-semibold hover:bg-fuchsia-500 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={!image || !selectedTrack || saving || deleting}
+            className="cursor-pointer rounded-xl bg-fuchsia-600 px-5 py-3 text-sm font-semibold transition-colors hover:bg-fuchsia-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving ? "Salvando memória..." : "Salvar no álbum"}
           </button>
@@ -351,7 +358,7 @@ export default function MemoryAlbum() {
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="mt-6 rounded-xl bg-fuchsia-600 px-5 py-3 text-sm font-semibold hover:bg-fuchsia-500"
+              className="mt-6 cursor-pointer rounded-xl bg-fuchsia-600 px-5 py-3 text-sm font-semibold transition-colors hover:bg-fuchsia-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400"
             >
               Adicionar primeira memória
             </button>
@@ -370,16 +377,18 @@ export default function MemoryAlbum() {
                 <button
                   type="button"
                   onClick={() => step(-1)}
+                  disabled={busy}
                   aria-label="Foto anterior"
-                  className="absolute left-3 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-black/80 sm:left-5"
+                  className="absolute left-3 cursor-pointer rounded-full border border-white/20 bg-black/60 p-3 text-white transition-colors hover:bg-black/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400 disabled:cursor-wait disabled:opacity-50 sm:left-5"
                 >
                   <FiArrowLeft size={22} />
                 </button>
                 <button
                   type="button"
                   onClick={() => step(1)}
+                  disabled={busy}
                   aria-label="Próxima foto"
-                  className="absolute right-3 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-black/80 sm:right-5"
+                  className="absolute right-3 cursor-pointer rounded-full border border-white/20 bg-black/60 p-3 text-white transition-colors hover:bg-black/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400 disabled:cursor-wait disabled:opacity-50 sm:right-5"
                 >
                   <FiArrowRight size={22} />
                 </button>
@@ -419,7 +428,7 @@ export default function MemoryAlbum() {
                 void playTrack({ id: currentMemory.trackSpotifyId })
               }
               disabled={busy}
-              className="inline-flex items-center gap-2 rounded-full bg-fuchsia-600 px-4 py-3 text-sm font-semibold hover:bg-fuchsia-500 disabled:opacity-50"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-fuchsia-600 px-4 py-3 text-sm font-semibold transition-colors hover:bg-fuchsia-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400 disabled:cursor-wait disabled:opacity-50"
             >
               {isCurrentTrackPlaying ? <FiPause /> : <FiPlay />}
               {isCurrentTrackPlaying ? "Pausar" : "Tocar música"}
@@ -427,8 +436,9 @@ export default function MemoryAlbum() {
             <button
               type="button"
               onClick={() => setMemoryToDelete(currentMemory)}
+              disabled={saving || deleting}
               aria-label="Remover memória"
-              className="rounded-full p-3 text-gray-500 hover:bg-red-500/10 hover:text-red-300"
+              className="cursor-pointer rounded-full p-3 text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <FiTrash2 />
             </button>
@@ -445,9 +455,10 @@ export default function MemoryAlbum() {
                   key={memory.id}
                   type="button"
                   onClick={() => navigateTo(index)}
+                  disabled={busy}
                   aria-label={`Abrir memória ${index + 1}`}
                   aria-current={index === currentIndex ? "true" : undefined}
-                  className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 ${index === currentIndex ? "border-fuchsia-400" : "border-transparent opacity-70 hover:opacity-100"}`}
+                  className={`h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400 disabled:cursor-wait disabled:opacity-50 ${index === currentIndex ? "border-fuchsia-400 opacity-100" : "border-transparent opacity-70 hover:scale-105 hover:opacity-100"}`}
                 >
                   <img
                     src={memory.imageData}
