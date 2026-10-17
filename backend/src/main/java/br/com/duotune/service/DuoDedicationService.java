@@ -8,6 +8,8 @@ import br.com.duotune.model.User;
 import br.com.duotune.repository.DuoDedicationRepository;
 import br.com.duotune.repository.DuoRepository;
 import br.com.duotune.repository.UserRepository;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,7 +69,11 @@ public class DuoDedicationService {
         dedication.setScheduledDate(request.scheduledDate());
         dedication.setDelivered(false);
 
-        dedicationRepository.save(dedication);
+        try {
+            dedicationRepository.save(dedication);
+        } catch (DataIntegrityViolationException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Você já programou uma surpresa para este dia.");
+        }
     }
 
     @Transactional(readOnly = true)

@@ -93,7 +93,7 @@ export default function Home() {
       playTrack({
         ...surpriseTrack,
         id: surpriseTrack.trackSpotifyId,
-      });
+      }, null, true);
     }
 
     setShowSurpriseModal(false);

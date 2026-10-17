@@ -276,7 +276,7 @@ export default function SpotifyProvider({ children }) {
     }
   }
 
-  async function playTrack(track, playlist = null) {
+  async function playTrack(track, playlist = null, forcePlay = false) {
     if (roomModeRef.current) {
       clearTimeout(roomNoticeTimerRef.current);
       setRoomNotice(true);
@@ -296,7 +296,7 @@ export default function SpotifyProvider({ children }) {
       const current = await playerRef.current.getCurrentState();
       const sameTrack =
         !playlist && current?.track_window.current_track.id === track.id;
-      const pause = sameTrack && !current.paused;
+      const pause = sameTrack && !current.paused && !forcePlay;
       const body =
         pause || sameTrack
           ? undefined

@@ -122,7 +122,8 @@ BEGIN
                 artist VARCHAR(255) NOT NULL,
                 image_url TEXT,
                 scheduled_date DATE NOT NULL,
-                delivered BOOLEAN NOT NULL DEFAULT false
+                delivered BOOLEAN NOT NULL DEFAULT false,
+                CONSTRAINT uk_receiver_date UNIQUE (receiver_id, scheduled_date) 
             );
 
             INSERT INTO duotune_schema_migrations(version)
