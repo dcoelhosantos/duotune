@@ -128,8 +128,10 @@ export default function Dedications() {
       <div className="flex border-b border-gray-800 mb-6">
         <button
           onClick={() => {
-            setLoading(true);
-            setActiveTab("received");
+            if (activeTab !== "received") {
+              setLoading(true);
+              setActiveTab("received");
+            }
           }}
           className={`flex items-center gap-2 px-6 py-3 font-semibold transition-colors ${
             activeTab === "received"
@@ -141,8 +143,10 @@ export default function Dedications() {
         </button>
         <button
           onClick={() => {
-            setLoading(true);
-            setActiveTab("sent");
+            if (activeTab !== "sent") {
+              setLoading(true);
+              setActiveTab("sent");
+            }
           }}
           className={`flex items-center gap-2 px-6 py-3 font-semibold transition-colors ${
             activeTab === "sent"
@@ -177,7 +181,7 @@ export default function Dedications() {
                   {formatDate(dedication.scheduleDate)}
                 </span>
                 {activeTab === "received" &&
-                  isPastDate(dedication.scheduledDate) && (
+                  isPastDate(dedication.scheduleDate) && (
                     <p className="text-xs text-yellow-500 mt-2 flex items-center gap-1">
                       <FiAlertCircle /> Sua dupla programou esta música para o
                       dia {formatDate(dedication.scheduleDate)}, mas você não

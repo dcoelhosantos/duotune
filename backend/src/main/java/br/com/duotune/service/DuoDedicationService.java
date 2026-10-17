@@ -141,9 +141,19 @@ public class DuoDedicationService {
         User receiver = userRepository.findByEmail(email).orElseThrow();
         LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
 
+        // Descobre o ID do parceiro atual (se houver)
+        Optional<Long> activeDuoIdOpt = duoRepository.findActiveDuoId(receiver.getId());
+        Long currentPartnerId = activeDuoIdOpt.map(duoId -> {
+            Duo activeDuo = duoRepository.findById(duoId).orElseThrow();
+            return activeDuo.getUser1().getId().equals(receiver.getId())
+                    ? activeDuo.getUser2().getId()
+                    : activeDuo.getUser1().getId();
+        }).orElse(null);
+
         return dedicationRepository
                 .findByReceiverIdAndScheduledDateLessThanEqualOrderByScheduledDateDesc(receiver.getId(), today)
                 .stream()
+                .filter(d -> d.isDelivered() || d.getSender().getId().equals(currentPartnerId))
                 .map(d -> new DedicationResponse(d.getId(), d.getTrackSpotifyId(), d.getTitle(), d.getArtist(),
                         d.getImageUrl(), d.getMessage(), d.getScheduledDate()))
                 .toList();
