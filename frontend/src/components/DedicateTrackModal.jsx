@@ -10,7 +10,10 @@ export default function DedicateTrackModal({ track, onClose }) {
   // Define a data mínima como amanhã
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const minDate = tomorrow.toISOString().split("T")[0];
+  const offsetMs = tomorrow.getTimezoneOffset() * 60000;
+  const minDate = new Date(tomorrow.getTime() - offsetMs)
+    .toISOString()
+    .split("T")[0];
 
   const handleSubmit = async (e) => {
     e.preventDefault();

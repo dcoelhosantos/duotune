@@ -1,5 +1,14 @@
 package br.com.duotune.dto;
 
-public record DedicationRequest(String trackSpotifyId, String title, String artist, String imageUrl,
-        java.time.LocalDate scheduledDate) {
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import java.time.LocalDate;
+
+public record DedicationRequest(
+                @NotBlank String trackSpotifyId,
+                @NotBlank String title,
+                @NotBlank String artist,
+                String imageUrl,
+                @NotNull @Future LocalDate scheduledDate) {
 }

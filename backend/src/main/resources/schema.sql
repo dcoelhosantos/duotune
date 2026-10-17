@@ -108,21 +108,26 @@ DO $$
 BEGIN
     PERFORM pg_advisory_xact_lock(20261016, 1);
     
-    IF NOT EXISTS (
-        SELECT 1 FROM duotune_schema_migrations
-        WHERE version = '20261016_create_duo_dedications'
-    ) THEN
-        CREATE TABLE IF NOT EXISTS duo_dedications (
-            id BIGSERIAL PRIMARY KEY,
-            sender_id BIGINT NOT NULL REFERENCES users(id),
-            receiver_id BIGINT NOT NULL REFERENCES users(id),
-            track_spotify_id VARCHAR(255) NOT NULL,
-            scheduled_date DATE NOT NULL,
-            delivered BOOLEAN NOT NULL DEFAULT false
-        );
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM duotune_schema_migrations
+            WHERE version = '20261016_create_duo_dedications'
+        ) THEN
+            CREATE TABLE IF NOT EXISTS duo_dedications (
+                id BIGSERIAL PRIMARY KEY,
+                sender_id BIGINT NOT NULL REFERENCES users(id),
+                receiver_id BIGINT NOT NULL REFERENCES users(id),
+                track_spotify_id VARCHAR(255) NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                artist VARCHAR(255) NOT NULL,
+                image_url TEXT,
+                scheduled_date DATE NOT NULL,
+                delivered BOOLEAN NOT NULL DEFAULT false
+            );
 
-        INSERT INTO duotune_schema_migrations(version)
-            VALUES ('20261016_create_duo_dedications');
+            INSERT INTO duotune_schema_migrations(version)
+                VALUES ('20261016_create_duo_dedications');
+        END IF;
     END IF;
 END;
 $$;;

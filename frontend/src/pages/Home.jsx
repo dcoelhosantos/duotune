@@ -72,8 +72,7 @@ export default function Home() {
             setShowSurpriseModal(true);
           }
         })
-        .catch(() => {
-        });
+        .catch(() => {});
     }
   }, [hasDuo]);
 
@@ -86,6 +85,25 @@ export default function Home() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCloseSurprise = async (play = false) => {
+    if (play) {
+      playTrack({
+        ...surpriseTrack,
+        id: surpriseTrack.trackSpotifyId,
+      });
+    }
+
+    setShowSurpriseModal(false);
+
+    try {
+      await duoApi(`/dedications/${surpriseTrack.id}/deliver`, {
+        method: "POST",
+      });
+    } catch (e) {
+      console.error("Falha ao confirmar a entrega da surpresa:", e);
     }
   };
 
@@ -241,7 +259,7 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md transition-opacity">
           <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-fuchsia-500/30 bg-gray-900 shadow-[0_0_50px_rgba(217,70,239,0.15)] text-center">
             <button
-              onClick={() => setShowSurpriseModal(false)}
+              onClick={() => handleCloseSurprise(false)}
               className="absolute right-4 top-4 text-gray-400 hover:text-white z-10"
             >
               <FiX size={24} />
@@ -285,10 +303,7 @@ export default function Home() {
               </div>
 
               <button
-                onClick={() => {
-                  playTrack(surpriseTrack);
-                  setShowSurpriseModal(false);
-                }}
+                onClick={() => handleCloseSurprise(true)}
                 disabled={busy}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-fuchsia-600 py-3 font-bold text-white hover:bg-fuchsia-500 transition-colors disabled:opacity-50"
               >

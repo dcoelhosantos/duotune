@@ -10,4 +10,6 @@ public interface DuoDedicationRepository extends JpaRepository<DuoDedication, Lo
     // anterior a hoje), ordenada pela data
     Optional<DuoDedication> findFirstByReceiverIdAndDeliveredFalseAndScheduledDateLessThanEqualOrderByScheduledDateAsc(
             Long receiverId, LocalDate date);
+
+    boolean existsByReceiverIdAndScheduledDate(Long receiverId, LocalDate scheduledDate);
 }

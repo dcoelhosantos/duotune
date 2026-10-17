@@ -44,6 +44,19 @@ public class DuoDedicationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A data da surpresa deve ser no futuro.");
         }
 
+        // Garante que o fuso horário seja respeitado na validação do servidor
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
+        if (!request.scheduledDate().isAfter(today)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A data da surpresa deve ser no futuro.");
+        }
+
+        // Trava para evitar sobreposição (1 por dia)
+        boolean alreadyScheduled = dedicationRepository.existsByReceiverIdAndScheduledDate(receiver.getId(),
+                request.scheduledDate());
+        if (alreadyScheduled) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Você já programou uma surpresa para este dia.");
+        }
+
         DuoDedication dedication = new DuoDedication();
         dedication.setSender(sender);
         dedication.setReceiver(receiver);
@@ -57,28 +70,38 @@ public class DuoDedicationService {
         dedicationRepository.save(dedication);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public DedicationResponse getPendingDedication(String email) {
         User receiver = userRepository.findByEmail(email).orElseThrow();
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
 
-        // Procura se tem alguma surpresa agendada pra hoje (ou atrasada) não entregue
         var optDedication = dedicationRepository
                 .findFirstByReceiverIdAndDeliveredFalseAndScheduledDateLessThanEqualOrderByScheduledDateAsc(
-                        receiver.getId(), LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo")));
+                        receiver.getId(), today);
 
-        if (optDedication.isEmpty()) {
+        if (optDedication.isEmpty())
             return null;
-        }
 
         DuoDedication dedication = optDedication.get();
 
-        dedication.setDelivered(true);
-        dedicationRepository.save(dedication);
-
         return new DedicationResponse(
+                dedication.getId(),
                 dedication.getTrackSpotifyId(),
                 dedication.getTitle(),
                 dedication.getArtist(),
                 dedication.getImageUrl());
+    }
+
+    @Transactional
+    public void confirmDelivery(String email, Long dedicationId) {
+        DuoDedication dedication = dedicationRepository.findById(dedicationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Surpresa não encontrada."));
+
+        if (!dedication.getReceiver().getEmail().equals(email)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado.");
+        }
+
+        dedication.setDelivered(true);
+        dedicationRepository.save(dedication);
     }
 }

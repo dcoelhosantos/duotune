@@ -3,6 +3,8 @@ package br.com.duotune.controller;
 import br.com.duotune.dto.DedicationRequest;
 import br.com.duotune.dto.DedicationResponse;
 import br.com.duotune.service.DuoDedicationService;
+import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +21,7 @@ public class DuoDedicationController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> createDedication(Principal principal, @RequestBody DedicationRequest request) {
+    public ResponseEntity<Void> createDedication(Principal principal, @Valid @RequestBody DedicationRequest request) {
         service.createDedication(principal.getName(), request);
         return ResponseEntity.ok().build();
     }
@@ -31,5 +33,11 @@ public class DuoDedicationController {
             return ResponseEntity.noContent().build(); // Status 204 se não houver música
         }
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/deliver")
+    public ResponseEntity<Void> confirmDelivery(Principal principal, @PathVariable Long id) {
+        service.confirmDelivery(principal.getName(), id);
+        return ResponseEntity.noContent().build();
     }
 }
