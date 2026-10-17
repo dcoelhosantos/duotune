@@ -1,4 +1,7 @@
 package br.com.duotune.dto;
 
-public record DedicationResponse(Long id, String trackSpotifyId, String title, String artist, String imageUrl) {
+import java.time.LocalDate;
+
+public record DedicationResponse(Long id, String trackSpotifyId, String title, String artist, String imageUrl,
+        String message, LocalDate scheduleDate) {
 }

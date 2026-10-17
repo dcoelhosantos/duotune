@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/duos/dedications")
@@ -38,6 +39,22 @@ public class DuoDedicationController {
     @PostMapping("/{id}/deliver")
     public ResponseEntity<Void> confirmDelivery(Principal principal, @PathVariable Long id) {
         service.confirmDelivery(principal.getName(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/sent")
+    public ResponseEntity<List<DedicationResponse>> getSentDedications(Principal principal) {
+        return ResponseEntity.ok(service.getSentDedications(principal.getName()));
+    }
+
+    @GetMapping("/received")
+    public ResponseEntity<List<DedicationResponse>> getReceivedDedications(Principal principal) {
+        return ResponseEntity.ok(service.getReceivedDedications(principal.getName()));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteDedication(Principal principal, @PathVariable Long id) {
+        service.deleteDedication(principal.getName(), id);
         return ResponseEntity.noContent().build();
     }
 }

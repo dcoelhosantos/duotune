@@ -38,6 +38,17 @@ public class DuoDedication {
     @Column(name = "image_url", columnDefinition = "text")
     private String imageUrl;
 
+    @Column(length = 255)
+    private String message;
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
     public String getTitle() {
         return title;
     }

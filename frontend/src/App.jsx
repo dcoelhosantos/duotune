@@ -20,7 +20,11 @@ import { InviteRoute } from "./routes/InviteRoute";
 import { PublicRoute } from "./routes/PublicRoute.jsx";
 import Fusion from "./pages/Fusion.jsx";
 import ManageDuo from "./duo/ManageDuo.jsx";
+<<<<<<< HEAD
 import MemoryAlbum from "./pages/MemoryAlbum.jsx";
+=======
+import Dedications from "./pages/Dedications";
+>>>>>>> 779444d (feat(duo): refatora arquitetura de dedicatórias e cria painel de gerenciamento.)
 
 function App() {
   return (
@@ -43,7 +47,11 @@ function App() {
             <Route path="/perfil" element={<Profile />} />
             <Route path="/fusion" element={<Fusion />} />
             <Route path="/duo" element={<ManageDuo />} />
+<<<<<<< HEAD
             <Route path="/memorias" element={<MemoryAlbum />} />
+=======
+            <Route path="/dedicacoes" element={<Dedications />} />
+>>>>>>> 779444d (feat(duo): refatora arquitetura de dedicatórias e cria painel de gerenciamento.)
             <Route element={<InviteRoute />}>
               <Route path="/convidar" element={<GenerateInvite />} />
               <Route path="/aceitar/:code?" element={<AcceptInvite />} />

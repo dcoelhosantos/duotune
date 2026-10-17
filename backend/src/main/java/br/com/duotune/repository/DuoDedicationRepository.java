@@ -3,6 +3,7 @@ package br.com.duotune.repository;
 import br.com.duotune.model.DuoDedication;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface DuoDedicationRepository extends JpaRepository<DuoDedication, Long> {
@@ -12,4 +13,9 @@ public interface DuoDedicationRepository extends JpaRepository<DuoDedication, Lo
             Long receiverId, Long senderId, LocalDate scheduledDate);
 
     boolean existsByReceiverIdAndScheduledDate(Long receiverId, LocalDate scheduledDate);
+
+    List<DuoDedication> findBySenderIdOrderByScheduledDateDesc(Long senderId);
+
+    List<DuoDedication> findByReceiverIdAndScheduledDateLessThanEqualOrderByScheduledDateDesc(Long receiverId,
+            LocalDate date);
 }

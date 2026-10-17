@@ -3,15 +3,13 @@ import {
   FiMusic,
   FiPlus,
   FiUserPlus,
-  FiPlay,
   FiGift,
-  FiX,
+  FiArrowRight,
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import CreatePlaylistModal from "../components/CreatePlaylistModal";
 import { playlistApi } from "../playlists/api";
 import { duoApi } from "../duo/api";
-import { useSpotify } from "../spotify/SpotifyContext";
 
 const PlaylistCard = ({ pl }) => {
   const [failedCover, setFailedCover] = useState(null);
@@ -59,17 +57,14 @@ export default function Home() {
   const [error, setError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const { playTrack, busy } = useSpotify();
-  const [surpriseTrack, setSurpriseTrack] = useState(null);
-  const [showSurpriseModal, setShowSurpriseModal] = useState(false);
+  const [hasPendingSurprise, setHasPendingSurprise] = useState(false);
 
   useEffect(() => {
     if (hasDuo) {
       duoApi("/dedications/pending")
         .then((data) => {
           if (data) {
-            setSurpriseTrack(data);
-            setShowSurpriseModal(true);
+            setHasPendingSurprise(true);
           }
         })
         .catch(() => {});
@@ -85,25 +80,6 @@ export default function Home() {
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCloseSurprise = async (play = false) => {
-    if (play) {
-      playTrack({
-        ...surpriseTrack,
-        id: surpriseTrack.trackSpotifyId,
-      }, null, true);
-    }
-
-    setShowSurpriseModal(false);
-
-    try {
-      await duoApi(`/dedications/${surpriseTrack.id}/deliver`, {
-        method: "POST",
-      });
-    } catch (e) {
-      console.error("Falha ao confirmar a entrega da surpresa:", e);
     }
   };
 
@@ -150,6 +126,31 @@ export default function Home() {
             className="mt-6 md:mt-0 bg-white text-fuchsia-700 px-6 py-3 rounded-full font-bold hover:bg-gray-100 transition-colors flex items-center gap-2 shadow-md hover:scale-105"
           >
             <FiUserPlus size={20} /> Convidar agora
+          </Link>
+        </div>
+      )}
+
+      {/* NOVO: Banner Minimalista de Surpresa Pendente */}
+      {hasPendingSurprise && (
+        <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between shadow-xl border border-fuchsia-500/50">
+          <div className="flex items-center gap-4 text-center sm:text-left">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-fuchsia-500/20 text-fuchsia-400 shrink-0 mx-auto sm:mx-0">
+              <FiGift size={28} />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white mb-1">
+                Surpresa do seu Duo!
+              </h2>
+              <p className="text-sm text-gray-300">
+                Sua dupla programou uma música especial para o seu dia de hoje.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/dedicacoes"
+            className="mt-5 sm:mt-0 w-full sm:w-auto flex justify-center items-center gap-2 bg-fuchsia-600 text-white px-6 py-3 rounded-full font-bold hover:bg-fuchsia-500 transition-all hover:scale-105 shadow-md"
+          >
+            Abrir Dedicatórias <FiArrowRight size={18} />
           </Link>
         </div>
       )}
@@ -253,65 +254,6 @@ export default function Home() {
             fetchPlaylistsManually();
           }}
         />
-      )}
-
-      {showSurpriseModal && surpriseTrack && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md transition-opacity">
-          <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-fuchsia-500/30 bg-gray-900 shadow-[0_0_50px_rgba(217,70,239,0.15)] text-center">
-            <button
-              onClick={() => handleCloseSurprise(false)}
-              className="absolute right-4 top-4 text-gray-400 hover:text-white z-10"
-            >
-              <FiX size={24} />
-            </button>
-
-            <div className="bg-gradient-to-b from-fuchsia-900/40 to-transparent p-8 pt-10">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-fuchsia-500/20 text-fuchsia-400">
-                <FiGift size={32} />
-              </div>
-              <h2 className="mb-2 text-2xl font-bold text-white">
-                Surpresa do seu Duo!
-              </h2>
-              <p className="text-sm text-gray-300">
-                Sua dupla programou uma música especial para o seu dia de hoje.
-              </p>
-            </div>
-
-            <div className="px-8 pb-8">
-              <div className="mb-6 flex flex-col items-center gap-3">
-                <div className="h-32 w-32 overflow-hidden rounded-lg shadow-lg">
-                  {surpriseTrack.imageUrl ? (
-                    <img
-                      src={surpriseTrack.imageUrl}
-                      alt="Capa"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gray-800">
-                      <FiMusic className="text-gray-500 text-4xl" />
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-white truncate w-56">
-                    {surpriseTrack.title}
-                  </p>
-                  <p className="text-sm text-gray-400 truncate w-56">
-                    {surpriseTrack.artist}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => handleCloseSurprise(true)}
-                disabled={busy}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-fuchsia-600 py-3 font-bold text-white hover:bg-fuchsia-500 transition-colors disabled:opacity-50"
-              >
-                <FiPlay size={18} className="fill-current" /> Ouvir Agora
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

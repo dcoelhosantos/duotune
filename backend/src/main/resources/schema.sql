@@ -121,6 +121,7 @@ BEGIN
                 title VARCHAR(255) NOT NULL,
                 artist VARCHAR(255) NOT NULL,
                 image_url TEXT,
+                message VARCHAR(255),
                 scheduled_date DATE NOT NULL,
                 delivered BOOLEAN NOT NULL DEFAULT false,
                 CONSTRAINT uk_receiver_date UNIQUE (receiver_id, scheduled_date) 
@@ -152,6 +153,8 @@ BEGIN
 
             -- 3. Garante que a coluna image_url tenha o tipo TEXT
             ALTER TABLE duo_dedications ALTER COLUMN image_url TYPE TEXT;
+
+            ALTER TABLE duo_dedications ADD COLUMN IF NOT EXISTS message VARCHAR(255);
 
             INSERT INTO duotune_schema_migrations(version)
                 VALUES ('20261017_update_duo_dedications');

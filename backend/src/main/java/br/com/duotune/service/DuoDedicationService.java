@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -42,18 +43,13 @@ public class DuoDedicationService {
         Duo duo = duoRepository.findById(activeDuoId).orElseThrow();
         User receiver = duo.getUser1().getId().equals(sender.getId()) ? duo.getUser2() : duo.getUser1();
 
-        // Só permite datas de amanhã em diante
-        if (!request.scheduledDate().isAfter(LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo")))) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A data da surpresa deve ser no futuro.");
-        }
-
-        // Garante que o fuso horário seja respeitado na validação do servidor
+        // Garante que o fuso horário seja respeitado na validação
         LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
         if (!request.scheduledDate().isAfter(today)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A data da surpresa deve ser no futuro.");
         }
 
-        // Trava para evitar sobreposição (1 por dia)
+        // Trava de leitura preventiva
         boolean alreadyScheduled = dedicationRepository.existsByReceiverIdAndScheduledDate(receiver.getId(),
                 request.scheduledDate());
         if (alreadyScheduled) {
@@ -67,16 +63,18 @@ public class DuoDedicationService {
         dedication.setTitle(request.title());
         dedication.setArtist(request.artist());
         dedication.setImageUrl(request.imageUrl());
+        dedication.setMessage(request.message());
         dedication.setScheduledDate(request.scheduledDate());
         dedication.setDelivered(false);
 
         try {
             dedicationRepository.save(dedication);
         } catch (DataIntegrityViolationException e) {
-            if (e.getMessage() != null && e.getMessage().contains("uk_receiver_date")) {
+            if (e.getMostSpecificCause() != null
+                    && e.getMostSpecificCause().getMessage().contains("uk_receiver_date")) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Você já programou uma surpresa para este dia.");
             }
-            throw e;
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao processar a dedicatória.");
         }
     }
 
@@ -110,7 +108,9 @@ public class DuoDedicationService {
                 dedication.getTrackSpotifyId(),
                 dedication.getTitle(),
                 dedication.getArtist(),
-                dedication.getImageUrl());
+                dedication.getImageUrl(),
+                dedication.getMessage(),
+                dedication.getScheduledDate());
     }
 
     @Transactional
@@ -124,5 +124,42 @@ public class DuoDedicationService {
 
         dedication.setDelivered(true);
         dedicationRepository.save(dedication);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DedicationResponse> getSentDedications(String email) {
+        User sender = userRepository.findByEmail(email).orElseThrow();
+        return dedicationRepository.findBySenderIdOrderByScheduledDateDesc(sender.getId())
+                .stream()
+                .map(d -> new DedicationResponse(d.getId(), d.getTrackSpotifyId(), d.getTitle(), d.getArtist(),
+                        d.getImageUrl(), d.getMessage(), d.getScheduledDate()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DedicationResponse> getReceivedDedications(String email) {
+        User receiver = userRepository.findByEmail(email).orElseThrow();
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
+
+        return dedicationRepository
+                .findByReceiverIdAndScheduledDateLessThanEqualOrderByScheduledDateDesc(receiver.getId(), today)
+                .stream()
+                .map(d -> new DedicationResponse(d.getId(), d.getTrackSpotifyId(), d.getTitle(), d.getArtist(),
+                        d.getImageUrl(), d.getMessage(), d.getScheduledDate()))
+                .toList();
+    }
+
+    @Transactional
+    public void deleteDedication(String email, Long dedicationId) {
+        DuoDedication dedication = dedicationRepository.findById(dedicationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dedicatória não encontrada."));
+
+        // Apenas quem enviou pode apagar
+        if (!dedication.getSender().getEmail().equals(email)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Você não tem permissão para excluir esta dedicatória.");
+        }
+
+        dedicationRepository.delete(dedication);
     }
 }

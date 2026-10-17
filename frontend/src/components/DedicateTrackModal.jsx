@@ -6,6 +6,7 @@ export default function DedicateTrackModal({ track, onClose }) {
   const [scheduledDate, setScheduledDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   // Define a data mínima como amanhã
   const tomorrow = new Date();
@@ -29,12 +30,17 @@ export default function DedicateTrackModal({ track, onClose }) {
           artist: track.artist,
           imageUrl: track.imageUrl,
           scheduledDate: scheduledDate,
+          message: message,
         }),
       });
       alert("Música programada com sucesso!");
       onClose();
     } catch (err) {
-      setError(err.message || "Erro ao programar a música.");
+      if (err.status === 409) {
+        setError("Você já programou uma surpresa para este dia.");
+      } else {
+        setError(err.message || "Erro ao programar a música.");
+      }
     } finally {
       setLoading(false);
     }
@@ -91,6 +97,20 @@ export default function DedicateTrackModal({ track, onClose }) {
           </div>
 
           {error && <p className="text-sm text-red-400">{error}</p>}
+
+          <div className="mb-4">
+            <label className="block text-sm text-gray-400 mb-1">
+              Recado (Opcional)
+            </label>
+            <textarea
+              maxLength={255}
+              rows={2}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Escreva algo especial..."
+              className="w-full rounded bg-gray-800 border border-gray-700 p-2 text-white focus:outline-none focus:border-fuchsia-500 resize-none"
+            />
+          </div>
 
           <button
             type="submit"
