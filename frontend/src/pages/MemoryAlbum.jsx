@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FiArrowLeft,
   FiArrowRight,
@@ -29,9 +29,8 @@ function formatDate(value) {
 export default function MemoryAlbum() {
   const navigate = useNavigate();
   const { playTrack, currentTrack, isPlaying, busy } = useSpotify();
-  const user = useMemo(
-    () => JSON.parse(localStorage.getItem("user") || "{}"),
-    [],
+  const [hasDuo, setHasDuo] = useState(
+    () => Boolean(JSON.parse(localStorage.getItem("user") || "{}").duoId),
   );
   const [memories, setMemories] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -48,6 +47,22 @@ export default function MemoryAlbum() {
   const [deleting, setDeleting] = useState(false);
   const mutationInProgress = useRef(false);
 
+  const markDuoInactive = useCallback(() => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    localStorage.setItem("user", JSON.stringify({ ...user, duoId: null }));
+    window.dispatchEvent(new Event("profile-updated"));
+    setHasDuo(false);
+    setMemories([]);
+    setCurrentIndex(0);
+    setShowForm(false);
+    setImage(null);
+    setTrackQuery("");
+    setTrackResults([]);
+    setSelectedTrack(null);
+    setMemoryToDelete(null);
+    setError("");
+  }, []);
+
   useEffect(() => {
     let active = true;
     memoriesApi()
@@ -55,7 +70,9 @@ export default function MemoryAlbum() {
         if (active) setMemories(data || []);
       })
       .catch((err) => {
-        if (active) setError(err.message);
+        if (!active) return;
+        if (err.status === 409) markDuoInactive();
+        else setError(err.message);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -63,7 +80,7 @@ export default function MemoryAlbum() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [markDuoInactive]);
 
   const currentMemory = memories[currentIndex];
   const isCurrentTrackPlaying =
@@ -115,7 +132,8 @@ export default function MemoryAlbum() {
       setCurrentIndex(memories.length);
       resetForm();
     } catch (err) {
-      setError(err.message);
+      if (err.status === 409) markDuoInactive();
+      else setError(err.message);
     } finally {
       mutationInProgress.current = false;
       setSaving(false);
@@ -141,7 +159,8 @@ export default function MemoryAlbum() {
       });
       setMemoryToDelete(null);
     } catch (err) {
-      setError(err.message);
+      if (err.status === 409) markDuoInactive();
+      else setError(err.message);
     } finally {
       mutationInProgress.current = false;
       setDeleting(false);
@@ -177,7 +196,7 @@ export default function MemoryAlbum() {
     return <p className="p-8 text-gray-400">Carregando álbum de memórias...</p>;
   }
 
-  if (!user.duoId) {
+  if (!hasDuo) {
     return (
       <section className="mx-auto mt-10 max-w-2xl rounded-3xl border border-gray-800 bg-gray-950 p-8 text-center">
         <FiImage size={42} className="mx-auto mb-4 text-fuchsia-400" />
@@ -303,7 +322,7 @@ export default function MemoryAlbum() {
                         setSelectedTrack(track);
                         setTrackResults([]);
                       }}
-                      className={`flex w-full items-center gap-3 rounded-xl border p-2 text-left ${selectedTrack?.id === track.id ? "border-fuchsia-500 bg-fuchsia-500/10" : "border-gray-800 bg-gray-900 hover:border-gray-600"}`}
+                      className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border p-2 text-left transition-colors hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400 ${selectedTrack?.id === track.id ? "border-fuchsia-500 bg-fuchsia-500/10" : "border-gray-800 bg-gray-900 hover:border-gray-600"}`}
                     >
                       {track.imageUrl ? (
                         <img
@@ -506,7 +525,7 @@ export default function MemoryAlbum() {
                 type="button"
                 onClick={() => setMemoryToDelete(null)}
                 disabled={deleting}
-                className="rounded-xl border border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-200 transition hover:bg-gray-800 disabled:opacity-50"
+                className="cursor-pointer rounded-xl border border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-200 transition hover:bg-gray-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -514,7 +533,7 @@ export default function MemoryAlbum() {
                 type="button"
                 onClick={() => void removeMemory()}
                 disabled={deleting}
-                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-wait disabled:opacity-60"
+                className="cursor-pointer rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300 disabled:cursor-wait disabled:opacity-60"
               >
                 {deleting ? "Excluindo..." : "Excluir memória"}
               </button>
