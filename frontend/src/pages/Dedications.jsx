@@ -10,8 +10,7 @@ import {
 } from "react-icons/fi";
 import { duoApi } from "../duo/api";
 import { useSpotify } from "../spotify/SpotifyContext";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function Dedications() {
   const [activeTab, setActiveTab] = useState("received");
@@ -19,9 +18,7 @@ export default function Dedications() {
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
-
   const { playTrack, connected } = useSpotify();
-
   const isConnected = connected;
 
   const connectSpotify = () => {
@@ -104,10 +101,25 @@ export default function Dedications() {
     let dateToCompare = dateString;
     if (Array.isArray(dateString)) {
       dateToCompare = `${dateString[0]}-${String(dateString[1]).padStart(2, "0")}-${String(dateString[2]).padStart(2, "0")}`;
+    } else if (typeof dateString === "object" && dateString.year) {
+      dateToCompare = `${dateString.year}-${String(dateString.monthValue || dateString.month || 1).padStart(2, "0")}-${String(dateString.dayOfMonth || dateString.day || 1).padStart(2, "0")}`;
     }
 
     const today = new Date().toISOString().split("T")[0];
     return dateToCompare < today;
+  };
+
+  const isPastOrToday = (dateValue) => {
+    if (!dateValue) return false;
+    let dateStr = dateValue;
+    if (Array.isArray(dateValue)) {
+      dateStr = `${dateValue[0]}-${String(dateValue[1]).padStart(2, "0")}-${String(dateValue[2]).padStart(2, "0")}`;
+    } else if (typeof dateValue === "object") {
+      dateStr = `${dateValue.year}-${String(dateValue.monthValue || dateValue.month || 1).padStart(2, "0")}-${String(dateValue.dayOfMonth || dateValue.day || 1).padStart(2, "0")}`;
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    return dateStr <= today;
   };
 
   return (
@@ -133,7 +145,7 @@ export default function Dedications() {
               setActiveTab("received");
             }
           }}
-          className={`flex items-center gap-2 px-6 py-3 font-semibold transition-colors ${
+          className={`flex items-center gap-2 px-6 py-3 font-semibold transition-colors cursor-pointer ${
             activeTab === "received"
               ? "border-b-2 border-fuchsia-500 text-fuchsia-500"
               : "text-gray-400 hover:text-gray-200"
@@ -148,7 +160,7 @@ export default function Dedications() {
               setActiveTab("sent");
             }
           }}
-          className={`flex items-center gap-2 px-6 py-3 font-semibold transition-colors ${
+          className={`flex items-center gap-2 px-6 py-3 font-semibold transition-colors cursor-pointer ${
             activeTab === "sent"
               ? "border-b-2 border-fuchsia-500 text-fuchsia-500"
               : "text-gray-400 hover:text-gray-200"
@@ -178,14 +190,21 @@ export default function Dedications() {
               {/* Header: Data e Aviso de Atraso */}
               <div className="mb-4">
                 <span className="text-xs font-bold text-gray-500 bg-gray-800 px-2 py-1 rounded">
-                  {formatDate(dedication.scheduleDate)}
+                  {formatDate(
+                    dedication.scheduleDate || dedication.scheduledDate,
+                  )}
                 </span>
                 {activeTab === "received" &&
-                  isPastDate(dedication.scheduleDate) && (
+                  isPastDate(
+                    dedication.scheduleDate || dedication.scheduledDate,
+                  ) && (
                     <p className="text-xs text-yellow-500 mt-2 flex items-center gap-1">
                       <FiAlertCircle /> Sua dupla programou esta música para o
-                      dia {formatDate(dedication.scheduleDate)}, mas você não
-                      logou a tempo!
+                      dia{" "}
+                      {formatDate(
+                        dedication.scheduleDate || dedication.scheduledDate,
+                      )}
+                      , mas você não logou a tempo!
                     </p>
                   )}
               </div>
@@ -243,7 +262,12 @@ export default function Dedications() {
                     onClick={() => handleDelete(dedication.id)}
                     className="flex items-center gap-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 px-3 py-2 rounded-lg transition-colors cursor-pointer"
                   >
-                    <FiTrash2 /> Cancelar Envio
+                    <FiTrash2 />
+                    {isPastOrToday(
+                      dedication.scheduleDate || dedication.scheduledDate,
+                    )
+                      ? "Excluir Dedicatória"
+                      : "Cancelar Envio"}
                   </button>
                 )}
               </div>
