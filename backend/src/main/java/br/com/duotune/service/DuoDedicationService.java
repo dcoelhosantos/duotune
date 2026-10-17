@@ -83,31 +83,27 @@ public class DuoDedicationService {
     @Transactional(readOnly = true)
     public DedicationResponse getPendingDedication(String email) {
         User receiver = userRepository.findByEmail(email).orElseThrow();
-        LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
 
-        var optDedication = dedicationRepository
-                .findFirstByReceiverIdAndDeliveredFalseAndScheduledDateLessThanEqualOrderByScheduledDateAsc(
-                        receiver.getId(), today);
-
-        if (optDedication.isEmpty())
-            return null;
-
-        DuoDedication dedication = optDedication.get();
-
-        // VALIDAÇÃO DE EDGE CASE: Verifica se o Duo que agendou a música ainda está
-        // ativo
         Optional<Long> activeDuoId = duoRepository.findActiveDuoId(receiver.getId());
         if (activeDuoId.isEmpty()) {
             return null;
         }
 
         Duo activeDuo = duoRepository.findById(activeDuoId.get()).orElseThrow();
-        boolean isSenderStillInDuo = activeDuo.getUser1().getId().equals(dedication.getSender().getId()) ||
-                activeDuo.getUser2().getId().equals(dedication.getSender().getId());
+        Long partnerId = activeDuo.getUser1().getId().equals(receiver.getId())
+                ? activeDuo.getUser2().getId()
+                : activeDuo.getUser1().getId();
 
-        if (!isSenderStillInDuo) {
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
+
+        var optDedication = dedicationRepository
+                .findFirstByReceiverIdAndSenderIdAndDeliveredFalseAndScheduledDateLessThanEqualOrderByScheduledDateAsc(
+                        receiver.getId(), partnerId, today);
+
+        if (optDedication.isEmpty())
             return null;
-        }
+
+        DuoDedication dedication = optDedication.get();
 
         return new DedicationResponse(
                 dedication.getId(),
