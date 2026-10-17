@@ -103,3 +103,62 @@ END;
 $$;;
 -- Preserva playlists existentes; a duração é preenchida a partir de dados do Spotify.
 ALTER TABLE IF EXISTS playlist_tracks ADD COLUMN IF NOT EXISTS duration_ms bigint;;
+
+DO $$
+BEGIN
+    PERFORM pg_advisory_xact_lock(20261016, 1);
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM duotune_schema_migrations
+            WHERE version = '20261016_create_duo_dedications'
+        ) THEN
+            CREATE TABLE IF NOT EXISTS duo_dedications (
+                id BIGSERIAL PRIMARY KEY,
+                sender_id BIGINT NOT NULL REFERENCES users(id),
+                receiver_id BIGINT NOT NULL REFERENCES users(id),
+                track_spotify_id VARCHAR(255) NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                artist VARCHAR(255) NOT NULL,
+                image_url TEXT,
+                message VARCHAR(255),
+                scheduled_date DATE NOT NULL,
+                delivered BOOLEAN NOT NULL DEFAULT false,
+                CONSTRAINT uk_receiver_date UNIQUE (receiver_id, scheduled_date) 
+            );
+
+            INSERT INTO duotune_schema_migrations(version)
+                VALUES ('20261016_create_duo_dedications');
+        END IF;
+    END IF;
+END;
+$$;;
+
+DO $$
+BEGIN
+    PERFORM pg_advisory_xact_lock(20261017, 1);
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'duo_dedications') THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM duotune_schema_migrations WHERE version = '20261017_update_duo_dedications'
+        ) THEN
+            -- 1. Remove duplicatas (mantendo apenas a mais recente)
+            DELETE FROM duo_dedications a USING duo_dedications b
+            WHERE a.id > b.id AND a.receiver_id = b.receiver_id AND a.scheduled_date = b.scheduled_date;
+
+            -- 2. Adiciona a constraint explicitamente APENAS se ela ainda não existir
+            IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uk_receiver_date') THEN
+                ALTER TABLE duo_dedications ADD CONSTRAINT uk_receiver_date UNIQUE (receiver_id, scheduled_date);
+            END IF;
+
+            -- 3. Garante que a coluna image_url tenha o tipo TEXT
+            ALTER TABLE duo_dedications ALTER COLUMN image_url TYPE TEXT;
+
+            ALTER TABLE duo_dedications ADD COLUMN IF NOT EXISTS message VARCHAR(255);
+
+            INSERT INTO duotune_schema_migrations(version)
+                VALUES ('20261017_update_duo_dedications');
+        END IF;
+    END IF;
+END;
+$$;;

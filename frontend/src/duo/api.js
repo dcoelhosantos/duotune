@@ -55,7 +55,9 @@ export async function duoApi(path = "", options = {}) {
     const error = new Error(
       response.status === 401
         ? "Sua sessão expirou. Entre novamente para continuar."
-        : data?.message || "Ocorreu um erro ao processar a solicitação do Duo.",
+        : data?.detail ||
+            data?.message ||
+            "Ocorreu um erro ao processar a solicitação do Duo.",
     );
     error.status = response.status;
     throw error;

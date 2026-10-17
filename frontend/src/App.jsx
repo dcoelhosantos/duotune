@@ -21,6 +21,7 @@ import { PublicRoute } from "./routes/PublicRoute.jsx";
 import Fusion from "./pages/Fusion.jsx";
 import ManageDuo from "./duo/ManageDuo.jsx";
 import MemoryAlbum from "./pages/MemoryAlbum.jsx";
+import Dedications from "./pages/Dedications";
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
             <Route path="/fusion" element={<Fusion />} />
             <Route path="/duo" element={<ManageDuo />} />
             <Route path="/memorias" element={<MemoryAlbum />} />
+            <Route path="/dedicacoes" element={<Dedications />} />
             <Route element={<InviteRoute />}>
               <Route path="/convidar" element={<GenerateInvite />} />
               <Route path="/aceitar/:code?" element={<AcceptInvite />} />

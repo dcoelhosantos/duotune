@@ -1,14 +1,19 @@
 import { useSpotify } from "../spotify/SpotifyContext";
 import { useEffect, useState } from "react";
-import { FiPause, FiPlay, FiPlus, FiSearch } from "react-icons/fi";
+import { FiPause, FiPlay, FiPlus, FiSearch, FiGift } from "react-icons/fi";
 import { useSearchParams } from "react-router-dom";
 import AddToPlaylistModal from "../components/AddToPlaylistModal";
+import DedicateTrackModal from "../components/DedicateTrackModal";
 
 export default function Search() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q");
   const [searchResult, setSearchResult] = useState(null);
   const [trackToAdd, setTrackToAdd] = useState(null);
+
+  // 👇 1. Novo estado para controlar qual música será dedicada
+  const [trackToDedicate, setTrackToDedicate] = useState(null);
+
   const { currentTrack, isPlaying, deviceId, busy, playTrack } = useSpotify();
 
   const loading = Boolean(query) && searchResult?.query !== query;
@@ -37,7 +42,7 @@ export default function Search() {
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
 
         const data = await response.json();
@@ -52,7 +57,7 @@ export default function Search() {
         }
 
         if (!cancelled) setSearchResult({ query, tracks: data, error: "" });
-      // eslint-disable-next-line no-unused-vars
+        // eslint-disable-next-line no-unused-vars
       } catch (err) {
         if (!cancelled)
           setSearchResult({
@@ -69,12 +74,13 @@ export default function Search() {
 
   return (
     <div className="space-y-6 text-white relative pb-10">
-      
       {/* Exibe uma mensagem amigável caso não haja nenhuma pesquisa ativa */}
       {!query ? (
         <div className="flex flex-col items-center justify-center text-gray-400 py-24 space-y-4">
           <FiSearch size={48} className="text-gray-600" />
-          <p className="text-lg">Comece a digitar para encontrar músicas e artistas.</p>
+          <p className="text-lg">
+            Comece a digitar para encontrar músicas e artistas.
+          </p>
         </div>
       ) : (
         <>
@@ -124,6 +130,16 @@ export default function Search() {
                   </button>
 
                   <div className="flex items-center gap-3 shrink-0">
+                    {/* 👇 2. NOVO BOTÃO: Dedicar ao Duo */}
+                    <button
+                      type="button"
+                      title="Dedicar ao Duo"
+                      onClick={() => setTrackToDedicate(track)}
+                      className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-fuchsia-400 transition-colors focus-visible:outline-2 focus-visible:outline-fuchsia-500 cursor-pointer"
+                    >
+                      <FiGift size={18} />
+                    </button>
+
                     <button
                       type="button"
                       title="Adicionar à playlist"
@@ -165,6 +181,14 @@ export default function Search() {
         <AddToPlaylistModal
           track={trackToAdd}
           onClose={() => setTrackToAdd(null)}
+        />
+      )}
+
+      {/* Modal para Programar dedicatória */}
+      {trackToDedicate && (
+        <DedicateTrackModal
+          track={trackToDedicate}
+          onClose={() => setTrackToDedicate(null)}
         />
       )}
     </div>
