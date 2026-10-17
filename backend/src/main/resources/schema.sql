@@ -132,3 +132,29 @@ BEGIN
     END IF;
 END;
 $$;;
+
+DO $$
+BEGIN
+    PERFORM pg_advisory_xact_lock(20261017, 1);
+    
+    -- Verifica se a tabela já existe antes de tentar alterá-la
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'duo_dedications') THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM duotune_schema_migrations WHERE version = '20261017_update_duo_dedications'
+        ) THEN
+            -- 1. Remove duplicatas (mantendo apenas a mais recente) para a constraint não quebrar
+            DELETE FROM duo_dedications a USING duo_dedications b
+            WHERE a.id > b.id AND a.receiver_id = b.receiver_id AND a.scheduled_date = b.scheduled_date;
+
+            -- 2. Adiciona a constraint explicitamente
+            ALTER TABLE duo_dedications ADD CONSTRAINT uk_receiver_date UNIQUE (receiver_id, scheduled_date);
+
+            -- 3. Garante que a coluna image_url tenha o tipo TEXT
+            ALTER TABLE duo_dedications ALTER COLUMN image_url TYPE TEXT;
+
+            INSERT INTO duotune_schema_migrations(version)
+                VALUES ('20261017_update_duo_dedications');
+        END IF;
+    END IF;
+END;
+$$;;

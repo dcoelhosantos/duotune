@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 @Service
 public class DuoDedicationService {
@@ -72,7 +73,10 @@ public class DuoDedicationService {
         try {
             dedicationRepository.save(dedication);
         } catch (DataIntegrityViolationException e) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Você já programou uma surpresa para este dia.");
+            if (e.getMessage() != null && e.getMessage().contains("uk_receiver_date")) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Você já programou uma surpresa para este dia.");
+            }
+            throw e;
         }
     }
 
@@ -89,6 +93,21 @@ public class DuoDedicationService {
             return null;
 
         DuoDedication dedication = optDedication.get();
+
+        // VALIDAÇÃO DE EDGE CASE: Verifica se o Duo que agendou a música ainda está
+        // ativo
+        Optional<Long> activeDuoId = duoRepository.findActiveDuoId(receiver.getId());
+        if (activeDuoId.isEmpty()) {
+            return null;
+        }
+
+        Duo activeDuo = duoRepository.findById(activeDuoId.get()).orElseThrow();
+        boolean isSenderStillInDuo = activeDuo.getUser1().getId().equals(dedication.getSender().getId()) ||
+                activeDuo.getUser2().getId().equals(dedication.getSender().getId());
+
+        if (!isSenderStillInDuo) {
+            return null;
+        }
 
         return new DedicationResponse(
                 dedication.getId(),

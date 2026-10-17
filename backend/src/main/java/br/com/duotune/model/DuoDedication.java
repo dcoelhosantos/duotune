@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "duo_dedications")
+@Table(name = "duo_dedications", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_receiver_date", columnNames = {"receiver_id", "scheduled_date"})
+})
 public class DuoDedication {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,7 +35,7 @@ public class DuoDedication {
     @Column(nullable = false)
     private String artist;
 
-    @Column(name = "image_url")
+    @Column(name = "image_url", columnDefinition = "text")
     private String imageUrl;
 
     public String getTitle() {
