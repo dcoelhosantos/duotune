@@ -20,6 +20,7 @@ import { InviteRoute } from "./routes/InviteRoute";
 import { PublicRoute } from "./routes/PublicRoute.jsx";
 import Fusion from "./pages/Fusion.jsx";
 import ManageDuo from "./duo/ManageDuo.jsx";
+import MemoryAlbum from "./pages/MemoryAlbum.jsx";
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
             <Route path="/perfil" element={<Profile />} />
             <Route path="/fusion" element={<Fusion />} />
             <Route path="/duo" element={<ManageDuo />} />
+            <Route path="/memorias" element={<MemoryAlbum />} />
             <Route element={<InviteRoute />}>
               <Route path="/convidar" element={<GenerateInvite />} />
               <Route path="/aceitar/:code?" element={<AcceptInvite />} />

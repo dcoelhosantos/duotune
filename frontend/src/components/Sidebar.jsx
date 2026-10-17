@@ -1,4 +1,4 @@
-import { FiHeadphones, FiHome, FiUsers, FiLayers } from "react-icons/fi";
+import { FiHeadphones, FiHome, FiUsers, FiLayers, FiImage } from "react-icons/fi";
 import { Link, NavLink } from "react-router-dom";
 import { useRoom } from "../room/RoomContext";
 
@@ -80,6 +80,17 @@ export default function Sidebar() {
           >
             <FiLayers size={24} className="shrink-0" />
             <span className="sr-only md:not-sr-only">Playlist Fusion</span>
+          </NavLink>
+
+          <NavLink
+            to="/memorias"
+            title="Álbum de memórias"
+            className={({ isActive }) =>
+              `flex items-center gap-4 rounded-xl px-3 py-3 -mx-3 font-medium transition-colors ${isActive ? "bg-fuchsia-500/10 text-fuchsia-300" : "text-gray-300 hover:bg-gray-900 hover:text-white"}`
+            }
+          >
+            <FiImage size={24} className="shrink-0" />
+            <span className="sr-only md:not-sr-only">Álbum de memórias</span>
           </NavLink>
         </div>
       </nav>
