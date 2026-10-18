@@ -15,6 +15,7 @@ import {
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AddToPlaylistModal from "../components/AddToPlaylistModal";
 import EditPlaylistModal from "../components/EditPlaylistModal";
+import PlaylistConfirmationModal from "../components/PlaylistConfirmationModal";
 import { playlistApi } from "../playlists/api";
 import { useRoom } from "../room/RoomContext";
 import RoomPlaylists from "../room/RoomPlaylists";
@@ -46,6 +47,12 @@ export default function PlaylistDetails() {
   const [trackForModal, setTrackForModal] = useState(null);
   const [isEditing, setIsEditing] = useState(false); 
   const [trackForDedication, setTrackForDedication] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [trackToRemove, setTrackToRemove] = useState(null);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState("");
 
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -75,10 +82,11 @@ export default function PlaylistDetails() {
     };
   }, [id, navigate]);
 
-  const handleRemoveTrack = async (trackSpotifyId) => {
-    setTrackMenuOpenId(null);
-    if (!window.confirm("Tem certeza que deseja remover esta música?")) return;
-
+  const handleRemoveTrack = async () => {
+    if (!trackToRemove || removing || !isOwner) return;
+    const trackSpotifyId = trackToRemove.trackSpotifyId;
+    setRemoving(true);
+    setRemoveError("");
     try {
       await playlistApi(`/${id}/tracks/${trackSpotifyId}`, {
         method: "DELETE",
@@ -87,25 +95,25 @@ export default function PlaylistDetails() {
         ...prev,
         tracks: prev.tracks.filter((t) => t.trackSpotifyId !== trackSpotifyId),
       }));
+      setTrackToRemove(null);
     } catch (err) {
-      alert("Erro ao remover a música: " + err.message);
+      setRemoveError(err.message || "Não foi possível remover a música. Tente novamente.");
+    } finally {
+      setRemoving(false);
     }
   };
 
   const handleDeletePlaylist = async () => {
-    setPlaylistMenuOpen(false);
-    if (
-      !window.confirm(
-        `Tem certeza que deseja APAGAR a playlist "${playlist.name}"? Esta ação não pode ser desfeita.`,
-      )
-    )
-      return;
-
+    if (deleting || !isOwner) return;
+    setDeleting(true);
+    setDeleteError("");
     try {
       await playlistApi(`/${id}`, { method: "DELETE" });
       navigate("/");
     } catch (err) {
-      alert("Erro ao excluir playlist: " + err.message);
+      setDeleteError(err.message || "Não foi possível excluir a playlist. Tente novamente.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -257,7 +265,11 @@ export default function PlaylistDetails() {
                       <>
                         <div className="h-px bg-gray-700 my-1"></div>
                         <button
-                          onClick={handleDeletePlaylist}
+                          onClick={() => {
+                            setPlaylistMenuOpen(false);
+                            setDeleteError("");
+                            setShowDeleteModal(true);
+                          }}
                           className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left text-red-400 cursor-pointer"
                         >
                           <FiTrash2 size={18} /> Excluir playlist
@@ -371,10 +383,6 @@ export default function PlaylistDetails() {
 
                   {trackMenuOpenId === track.trackSpotifyId && (
                     <div className="absolute right-8 top-0 mt-2 w-56 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-2 text-sm text-gray-300">
-                      <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left cursor-pointer">
-                        <FiList size={18} /> Tocar a seguir
-                      </button>
-
                       <button
                         onClick={() => {
                           setTrackForModal({
@@ -409,9 +417,11 @@ export default function PlaylistDetails() {
                         <>
                           <div className="h-px bg-gray-700 my-1"></div>
                           <button
-                            onClick={() =>
-                              handleRemoveTrack(track.trackSpotifyId)
-                            }
+                            onClick={() => {
+                              setTrackMenuOpenId(null);
+                              setRemoveError("");
+                              setTrackToRemove(track);
+                            }}
                             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors text-left text-red-400 cursor-pointer"
                           >
                             <FiTrash2 size={18} /> Remover da playlist
@@ -426,6 +436,43 @@ export default function PlaylistDetails() {
           </div>
         )}
       </div>
+
+      {showDeleteModal && (
+        <PlaylistConfirmationModal
+          title="Excluir playlist?"
+          confirmLabel="Sim, excluir playlist"
+          pendingLabel="Excluindo..."
+          pending={deleting}
+          error={deleteError}
+          onClose={() => {
+            if (!deleting) setShowDeleteModal(false);
+          }}
+          onConfirm={handleDeletePlaylist}
+        >
+          Você está prestes a excluir a playlist{" "}
+          <strong className="break-words text-fuchsia-400">{playlist.name}</strong>.
+          Esta ação não pode ser desfeita.
+        </PlaylistConfirmationModal>
+      )}
+
+      {trackToRemove && (
+        <PlaylistConfirmationModal
+          title="Remover música da playlist?"
+          confirmLabel="Sim, remover música"
+          pendingLabel="Removendo..."
+          pending={removing}
+          error={removeError}
+          onClose={() => {
+            if (!removing) setTrackToRemove(null);
+          }}
+          onConfirm={handleRemoveTrack}
+        >
+          Deseja remover{" "}
+          <strong className="break-words text-fuchsia-400">{trackToRemove.title || "esta música"}</strong>{" "}
+          da playlist <strong className="break-words text-fuchsia-400">{playlist.name}</strong>?
+          Você pode adicioná-la novamente depois.
+        </PlaylistConfirmationModal>
+      )}
 
       {showRoomPlaylist && (
         <RoomPlaylists

@@ -33,7 +33,7 @@ public class EmailService {
                     "<p>Seu código de pareamento é:</p>" +
                     "<h2><strong style='color: #A855F7; letter-spacing: 2px;'>" + invitationCode + "</strong></h2>" +
                     "<br>" +
-                    "<p>Acesse o aplicativo, insira este código e comecem a compartilhar músicas.</p>" +
+                    "<p>Acesse o website, insira este código e comecem a compartilhar músicas.</p>" +
                     "<p><small>Este convite expira em 24 horas.</small></p>" +
                     "<br>" +
                     "<p>Equipe DuoTune.</p>";

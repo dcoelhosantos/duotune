@@ -158,7 +158,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full p-3 mt-6 bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer w-full p-3 mt-6 bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? "Cadastrando..." : "Criar conta"}
             </button>

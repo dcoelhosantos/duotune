@@ -97,11 +97,13 @@ export default function Home() {
         return;
       }
 
-      playTrack(
+      const started = await playTrack(
         { ...surpriseTrack, id: surpriseTrack.trackSpotifyId },
         null,
         true,
       );
+
+      if (!started) return;
 
       try {
         await duoApi(`/dedications/${surpriseTrack.id}/deliver`, {

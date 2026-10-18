@@ -1,3 +1,5 @@
+import DuoEmptyState from "../components/DuoEmptyState";
+import DuoPageHeading from "../components/DuoPageHeading";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FiArrowLeft,
@@ -11,7 +13,6 @@ import {
   FiTrash2,
   FiX,
 } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
 import { memoriesApi } from "../memories/api";
 import { spotifyApi } from "../spotify/api";
 import { useSpotify } from "../spotify/SpotifyContext";
@@ -26,8 +27,17 @@ function formatDate(value) {
   });
 }
 
+function MemoryAlbumHeading() {
+  return (
+    <DuoPageHeading
+      eyebrow="Nossa história"
+      title="Álbum de Memórias"
+      description="Fotos e músicas que contam a história de vocês."
+    />
+  );
+}
+
 export default function MemoryAlbum() {
-  const navigate = useNavigate();
   const { playTrack, currentTrack, isPlaying, busy } = useSpotify();
   const [hasDuo, setHasDuo] = useState(
     () => Boolean(JSON.parse(localStorage.getItem("user") || "{}").duoId),
@@ -198,37 +208,21 @@ export default function MemoryAlbum() {
 
   if (!hasDuo) {
     return (
-      <section className="mx-auto mt-10 max-w-2xl rounded-3xl border border-gray-800 bg-gray-950 p-8 text-center">
-        <FiImage size={42} className="mx-auto mb-4 text-fuchsia-400" />
-        <h1 className="text-2xl font-bold">Um álbum para vocês dois</h1>
-        <p className="mt-3 text-gray-400">
-          Forme um Duo para criar e compartilhar memórias.
-        </p>
-        <button
-          type="button"
-          onClick={() => navigate("/convidar")}
-          className="mt-6 cursor-pointer rounded-xl bg-fuchsia-600 px-5 py-3 font-semibold transition-colors hover:bg-fuchsia-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400"
-        >
-          Convidar minha dupla
-        </button>
-      </section>
+      <div className="mx-auto max-w-5xl space-y-6 pb-10">
+        <MemoryAlbumHeading />
+        <DuoEmptyState
+          icon={<FiImage size={36} />}
+          title="Um álbum para vocês dois"
+          description="Forme seu Duo para guardar fotos e músicas dos momentos que vocês viveram juntos."
+        />
+      </div>
     );
   }
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-400">
-            Seu espaço a dois
-          </p>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Álbum de memórias
-          </h1>
-          <p className="mt-2 text-sm text-gray-400">
-            Fotos e músicas que contam a história de vocês.
-          </p>
-        </div>
+        <MemoryAlbumHeading />
         <button
           type="button"
           onClick={() => {

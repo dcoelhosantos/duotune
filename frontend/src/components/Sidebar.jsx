@@ -90,13 +90,13 @@ export default function Sidebar() {
 
           <NavLink
             to="/memorias"
-            title="Álbum de memórias"
+            title="Álbum de Memórias"
             className={({ isActive }) =>
               `flex items-center gap-4 rounded-xl px-3 py-3 -mx-3 font-medium transition-colors ${isActive ? "bg-fuchsia-500/10 text-fuchsia-300" : "text-gray-300 hover:bg-gray-900 hover:text-white"}`
             }
           >
             <FiImage size={24} className="shrink-0" />
-            <span className="sr-only md:not-sr-only">Álbum de memórias</span>
+            <span className="sr-only md:not-sr-only">Álbum de Memórias</span>
           </NavLink>
 
           <NavLink
