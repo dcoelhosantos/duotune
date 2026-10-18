@@ -90,7 +90,7 @@ public class SpotifyService {
 
     public List<TrackResponseDTO> searchTracks(String query) {
         try {
-            return fetchTracks(query);
+            return fetchTracksWithRetry(query);
         } catch (HttpClientErrorException.TooManyRequests error) {
             throw new ApplicationException(ErrorType.RATE_LIMITED,
                     "O Spotify recebeu muitas solicitações. Aguarde um pouco e tente novamente.");
@@ -100,9 +100,31 @@ public class SpotifyService {
         }
     }
 
-    @SuppressWarnings("rawtypes")
-    private List<TrackResponseDTO> fetchTracks(String query) {
+    private List<TrackResponseDTO> fetchTracksWithRetry(String query) {
         String token = getAccessToken();
+        try {
+            return fetchTracks(query, token);
+        } catch (HttpClientErrorException.Unauthorized rejected) {
+            invalidateCachedAccessToken(token);
+            String renewedToken = getAccessToken();
+            try {
+                return fetchTracks(query, renewedToken);
+            } catch (HttpClientErrorException.Unauthorized rejectedAgain) {
+                invalidateCachedAccessToken(renewedToken);
+                throw rejectedAgain;
+            }
+        }
+    }
+
+    private synchronized void invalidateCachedAccessToken(String rejectedToken) {
+        if (rejectedToken.equals(cachedAccessToken)) {
+            cachedAccessToken = null;
+            tokenExpiresAt = Instant.EPOCH;
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private List<TrackResponseDTO> fetchTracks(String query, String token) {
         java.net.URI url = org.springframework.web.util.UriComponentsBuilder
             .fromUriString("https://api.spotify.com/v1/search")
             .queryParam("type", "track").queryParam("limit", 10).queryParam("q", "{query}")

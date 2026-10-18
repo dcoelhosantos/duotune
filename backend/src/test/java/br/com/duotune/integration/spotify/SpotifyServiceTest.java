@@ -15,6 +15,7 @@ import br.com.duotune.exception.ErrorType;
 import br.com.duotune.repository.TrackMetadataRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
@@ -95,6 +96,32 @@ class SpotifyServiceTest {
     }
 
     @Test
+    void renewsAccessTokenWhenItIsWithinSixtySecondsOfExpiration() {
+        TrackMetadataRepository metadata = mock(TrackMetadataRepository.class);
+        RestTemplate http = new RestTemplate();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(http).build();
+        SpotifyService spotify = new SpotifyService(metadata, "client", "secret", http);
+
+        server.expect(requestTo("https://accounts.spotify.com/api/token"))
+                .andRespond(withSuccess("{\"access_token\":\"soon-expired-token\",\"expires_in\":30}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(org.hamcrest.Matchers.containsString("https://api.spotify.com/v1/search")))
+                .andExpect(header("Authorization", "Bearer soon-expired-token"))
+                .andRespond(withSuccess("{\"tracks\":{\"items\":[]}}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo("https://accounts.spotify.com/api/token"))
+                .andRespond(withSuccess("{\"access_token\":\"renewed-token\",\"expires_in\":3600}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(org.hamcrest.Matchers.containsString("https://api.spotify.com/v1/search")))
+                .andExpect(header("Authorization", "Bearer renewed-token"))
+                .andRespond(withSuccess("{\"tracks\":{\"items\":[]}}", MediaType.APPLICATION_JSON));
+
+        spotify.searchTracks("primeira");
+        spotify.searchTracks("segunda");
+
+        server.verify();
+    }
+
+    @Test
     void mapsMalformedSpotifySearchResponseToIntegrationFailure() {
         TrackMetadataRepository metadata = mock(TrackMetadataRepository.class);
         RestTemplate http = new RestTemplate();
@@ -111,6 +138,36 @@ class SpotifyServiceTest {
                 () -> spotify.searchTracks("faixa"));
 
         assertEquals(ErrorType.INTEGRATION_FAILURE, error.getType());
+        server.verify();
+    }
+
+    @Test
+    void discardsUnauthorizedTokenAndRetriesSearchOnce() {
+        TrackMetadataRepository metadata = mock(TrackMetadataRepository.class);
+        RestTemplate http = new RestTemplate();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(http).build();
+        SpotifyService spotify = new SpotifyService(metadata, "client", "secret", http);
+
+        server.expect(requestTo("https://accounts.spotify.com/api/token"))
+                .andRespond(withSuccess("{\"access_token\":\"rejected-token\",\"expires_in\":3600}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(org.hamcrest.Matchers.containsString("https://api.spotify.com/v1/search")))
+                .andExpect(header("Authorization", "Bearer rejected-token"))
+                .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators
+                        .withStatus(HttpStatus.UNAUTHORIZED));
+        server.expect(requestTo("https://accounts.spotify.com/api/token"))
+                .andRespond(withSuccess("{\"access_token\":\"fresh-token\",\"expires_in\":3600}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(org.hamcrest.Matchers.containsString("https://api.spotify.com/v1/search")))
+                .andExpect(header("Authorization", "Bearer fresh-token"))
+                .andRespond(withSuccess("{\"tracks\":{\"items\":[]}}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo(org.hamcrest.Matchers.containsString("https://api.spotify.com/v1/search")))
+                .andExpect(header("Authorization", "Bearer fresh-token"))
+                .andRespond(withSuccess("{\"tracks\":{\"items\":[]}}", MediaType.APPLICATION_JSON));
+
+        spotify.searchTracks("primeira");
+        spotify.searchTracks("segunda");
+
         server.verify();
     }
 }
