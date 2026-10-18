@@ -1,5 +1,6 @@
 package br.com.duotune.service;
 
+import br.com.duotune.integration.email.EmailService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import br.com.duotune.dto.*;
@@ -79,12 +80,7 @@ public class DuoService {
 
         invitation = invitationRepository.save(invitation);
 
-        try {
-            emailService.sendInvitationEmail(recipient.getEmail(), sender.getName(), invitation.getCode());
-        } catch (Exception e) {
-            System.err.println(
-                    "Aviso: Convite gerado no banco, mas falha ao enviar o e-mail do Google: " + e.getMessage());
-        }
+        emailService.sendInvitationEmail(recipient.getEmail(), sender.getName(), invitation.getCode());
 
         return new InvitationResponse(
                 new InvitationData(invitation.getId(), invitation.getCode(), invitation.getStatus(),
