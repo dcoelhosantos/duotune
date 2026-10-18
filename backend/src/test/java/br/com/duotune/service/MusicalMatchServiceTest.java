@@ -1,6 +1,7 @@
 package br.com.duotune.service;
 
 import br.com.duotune.dto.RecentPlay;
+import br.com.duotune.port.music.ListeningHistory;
 
 import br.com.duotune.model.*;
 import br.com.duotune.repository.*;
@@ -20,7 +21,7 @@ class MusicalMatchServiceTest {
     private final UserRepository users = mock(UserRepository.class);
     private final DuoRepository duos = mock(DuoRepository.class);
     private final MusicalMatchRepository matches = mock(MusicalMatchRepository.class);
-    private final SpotifyHistoryService spotify = mock(SpotifyHistoryService.class);
+    private final ListeningHistory spotify = mock(ListeningHistory.class);
     private MusicalMatchService service;
     private User first;
     private User second;

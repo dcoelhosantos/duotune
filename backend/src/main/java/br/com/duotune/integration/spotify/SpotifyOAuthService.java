@@ -1,9 +1,10 @@
-package br.com.duotune.service;
+package br.com.duotune.integration.spotify;
 
 import java.time.Instant;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -12,10 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-import br.com.duotune.exception.ApplicationException;
-import br.com.duotune.exception.ErrorType;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import br.com.duotune.exception.ApplicationException;
+import br.com.duotune.exception.ErrorType;
 import br.com.duotune.model.User;
 import br.com.duotune.repository.UserRepository;
 
@@ -28,15 +29,21 @@ public class SpotifyOAuthService {
     private final String clientSecret;
     private final String redirectUri;
 
+    @Autowired
     public SpotifyOAuthService(UserRepository users,
             @Value("${spotify.client.id}") String clientId,
             @Value("${spotify.client.secret}") String clientSecret,
             @Value("${spotify.redirect.uri}") String redirectUri) {
+        this(users, clientId, clientSecret, redirectUri, createHttpClient());
+    }
+
+    SpotifyOAuthService(UserRepository users, String clientId, String clientSecret,
+            String redirectUri, RestTemplate http) {
         this.users = users;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
-        this.http = createHttpClient();
+        this.http = http;
     }
 
     // Define limites de espera para conexão e resposta do Spotify.

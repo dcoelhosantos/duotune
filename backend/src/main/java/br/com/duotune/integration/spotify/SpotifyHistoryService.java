@@ -1,6 +1,8 @@
-package br.com.duotune.service;
+package br.com.duotune.integration.spotify;
 
 import br.com.duotune.dto.RecentPlay;
+import br.com.duotune.exception.ApplicationException;
+import br.com.duotune.exception.ErrorType;
 
 import br.com.duotune.model.User;
 import org.springframework.http.*;
@@ -8,8 +10,6 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.client.*;
-import br.com.duotune.exception.ApplicationException;
-import br.com.duotune.exception.ErrorType;
 import java.time.Instant;
 import java.util.*;
 

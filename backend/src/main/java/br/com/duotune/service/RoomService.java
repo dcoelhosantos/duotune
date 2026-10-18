@@ -1,6 +1,7 @@
 package br.com.duotune.service;
 
 import br.com.duotune.config.StompAccessInterceptor;
+import br.com.duotune.port.music.TrackCatalog;
 import br.com.duotune.model.User;
 import br.com.duotune.repository.DuoRepository;
 import br.com.duotune.repository.UserRepository;
@@ -22,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RoomService {
     public record Member(Long id, String name, String profileImageUrl) {}
     public record ChatMessage(String id, String clientId, Long senderId, String senderName, String text, Instant sentAt) {}
-    public record QueueEntry(String id, SpotifyRoomCatalog.Track track, Long addedBy) {}
+    public record QueueEntry(String id, TrackCatalog.Track track, Long addedBy) {}
     public record ReadyUser(Long userId, String clientId) {}
     public record Playback(long revision, boolean playing, long positionMs, long updatedAt) {}
     public record State(Long duoId, long version, List<Long> onlineUserIds, List<ChatMessage> messages,
@@ -48,7 +49,7 @@ public class RoomService {
         final Map<Long, Instant> lastMessageAt = new HashMap<>();
     }
 
-    private final SpotifyRoomCatalog catalog;
+    private final TrackCatalog catalog;
     private final PlaylistService playlists;
     private final UserRepository users;
     private final DuoRepository duos;
@@ -57,7 +58,7 @@ public class RoomService {
     private final Map<Long, Room> rooms = new ConcurrentHashMap<>();
     private final Map<String, Long> sessionRooms = new ConcurrentHashMap<>();
 
-    public RoomService(UserRepository users, DuoRepository duos, SimpMessagingTemplate messaging, StompAccessInterceptor access, SpotifyRoomCatalog catalog, PlaylistService playlists) {
+    public RoomService(UserRepository users, DuoRepository duos, SimpMessagingTemplate messaging, StompAccessInterceptor access, TrackCatalog catalog, PlaylistService playlists) {
         this.playlists = playlists;
         this.catalog = catalog;
         this.users = users; this.duos = duos; this.messaging = messaging; this.access = access;
