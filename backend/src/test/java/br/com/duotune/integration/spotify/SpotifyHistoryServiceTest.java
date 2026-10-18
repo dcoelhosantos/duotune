@@ -1,22 +1,31 @@
-package br.com.duotune.service;
+package br.com.duotune.integration.spotify;
 
-
-
-import org.junit.jupiter.api.Test;
-import br.com.duotune.exception.ApplicationException;
-import br.com.duotune.exception.ErrorType;
 import java.util.List;
 import java.util.Map;
+
 import br.com.duotune.model.User;
+import br.com.duotune.exception.ApplicationException;
+import br.com.duotune.exception.ErrorType;
+import br.com.duotune.integration.spotify.SpotifyHistoryService.Artist;
+import br.com.duotune.integration.spotify.SpotifyHistoryService.Item;
+import br.com.duotune.integration.spotify.SpotifyHistoryService.Page;
+import br.com.duotune.integration.spotify.SpotifyHistoryService.Track;
+import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.test.web.client.MockRestServiceServer;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
-import static org.junit.jupiter.api.Assertions.*;
-import br.com.duotune.service.SpotifyHistoryService.*;
+import org.springframework.web.client.RestTemplate;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.anything;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class SpotifyHistoryServiceTest {
     @Test void refreshesExpiredTokenAndDeserializesSpotifyResponse() {

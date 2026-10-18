@@ -1,27 +1,37 @@
-package br.com.duotune.service;
+package br.com.duotune.integration.spotify;
 
+import br.com.duotune.port.music.TrackCatalog;
+import br.com.duotune.exception.ApplicationException;
+import br.com.duotune.exception.ErrorType;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-import br.com.duotune.exception.ApplicationException;
-import br.com.duotune.exception.ErrorType;
 
 @Service
 public class SpotifyRoomCatalog {
-    public record Track(String id, String title, String artist, String imageUrl, long durationMs) {}
     private final SpotifyOAuthService oauth;
     private final RestTemplate http;
 
+    @Autowired
     public SpotifyRoomCatalog(SpotifyOAuthService oauth) {
+        this(oauth, createHttpClient());
+    }
+
+    SpotifyRoomCatalog(SpotifyOAuthService oauth, RestTemplate http) {
         this.oauth = oauth;
+        this.http = http;
+    }
+
+    private static RestTemplate createHttpClient() {
         var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5000);
         factory.setReadTimeout(10000);
-        this.http = new RestTemplate(factory);
+        return new RestTemplate(factory);
     }
 
     @SuppressWarnings("rawtypes")
@@ -53,7 +63,7 @@ public class SpotifyRoomCatalog {
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    public Track track(String email, String id) {
+    public TrackCatalog.Track track(String email, String id) {
         if (id == null || !id.matches("[A-Za-z0-9]{22}")) {
             throw new ApplicationException(ErrorType.INVALID_INPUT, "Música inválida.");
         }
@@ -64,7 +74,7 @@ public class SpotifyRoomCatalog {
         List<Map> artists = (List<Map>) data.get("artists");
         Map album = (Map) data.get("album");
         List<Map> images = album == null ? List.of() : (List<Map>) album.getOrDefault("images", List.of());
-        return new Track(id, String.valueOf(data.get("name")),
+        return new TrackCatalog.Track(id, String.valueOf(data.get("name")),
                 artists == null ? "" : String.join(", ", artists.stream().map(a -> String.valueOf(a.get("name"))).toList()),
                 images.isEmpty() ? null : String.valueOf(images.get(0).get("url")), duration.longValue());
     }

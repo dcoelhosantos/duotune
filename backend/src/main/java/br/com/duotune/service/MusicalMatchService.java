@@ -5,6 +5,7 @@ import br.com.duotune.model.MatchListeningEntry;
 import br.com.duotune.repository.MusicalMatchRepository;
 import br.com.duotune.dto.MatchResponse;
 import br.com.duotune.dto.RecentPlay;
+import br.com.duotune.port.music.ListeningHistory;
 
 import br.com.duotune.model.Duo;
 import br.com.duotune.model.User;
@@ -22,15 +23,15 @@ public class MusicalMatchService {
     private final UserRepository users;
     private final DuoRepository duos;
     private final MusicalMatchRepository matches;
-    private final SpotifyHistoryService spotify;
+    private final ListeningHistory listeningHistory;
     private final TransactionTemplate transactions;
 
     public MusicalMatchService(UserRepository users, DuoRepository duos, MusicalMatchRepository matches,
-            SpotifyHistoryService spotify, PlatformTransactionManager manager) {
+            ListeningHistory listeningHistory, PlatformTransactionManager manager) {
         this.users = users;
         this.duos = duos;
         this.matches = matches;
-        this.spotify = spotify;
+        this.listeningHistory = listeningHistory;
         transactions = new TransactionTemplate(manager);
     }
 
@@ -54,8 +55,8 @@ public class MusicalMatchService {
             current.getUser2().getEmail();
             return current;
         });
-        List<RecentPlay> first = spotify.recent(duo.getUser1());
-        List<RecentPlay> second = spotify.recent(duo.getUser2());
+        List<RecentPlay> first = listeningHistory.recent(duo.getUser1());
+        List<RecentPlay> second = listeningHistory.recent(duo.getUser2());
         if (first.isEmpty() || second.isEmpty()) {
             throw new ApplicationException(ErrorType.UNPROCESSABLE,
                     "Dados insuficientes: os dois precisam ter músicas no histórico recente do Spotify. Ouçam algumas faixas e tentem novamente.");

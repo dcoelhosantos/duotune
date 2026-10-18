@@ -18,19 +18,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClientException;
-import br.com.duotune.exception.ApplicationException;
 
-import br.com.duotune.service.SpotifyOAuthService;
+import br.com.duotune.exception.ApplicationException;
+import br.com.duotune.integration.spotify.SpotifyFacade;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/spotify")
 public class SpotifyOAuthController {
-    private final SpotifyOAuthService spotify;
+    private final SpotifyFacade spotify;
     private final String frontendUrl;
     private record Pending(String state, Long userId, Instant expiresAt) implements java.io.Serializable {}
 
-    public SpotifyOAuthController(SpotifyOAuthService spotify, @Value("${frontend.url}") String frontendUrl) {
+    public SpotifyOAuthController(SpotifyFacade spotify, @Value("${frontend.url}") String frontendUrl) {
         this.spotify = spotify;
         this.frontendUrl = frontendUrl;
     }

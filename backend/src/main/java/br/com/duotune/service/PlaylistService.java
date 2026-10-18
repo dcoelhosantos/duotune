@@ -12,6 +12,7 @@ import br.com.duotune.model.Playlist;
 import br.com.duotune.model.PlaylistTrack;
 import br.com.duotune.model.User;
 import br.com.duotune.model.TrackMetadata;
+import br.com.duotune.port.music.TrackCatalog;
 import br.com.duotune.repository.TrackMetadataRepository;
 import br.com.duotune.repository.DuoRepository;
 import br.com.duotune.repository.PlaylistRepository;
@@ -31,11 +32,11 @@ public class PlaylistService {
     private final UserRepository userRepository;
     private final DuoRepository duoRepository;
     private final TrackMetadataRepository metadata;
-    private final SpotifyRoomCatalog catalog;
+    private final TrackCatalog catalog;
 
     public PlaylistService(PlaylistRepository playlistRepository, PlaylistTrackRepository playlistTrackRepository,
             UserRepository userRepository, DuoRepository duoRepository,
-            TrackMetadataRepository metadata, SpotifyRoomCatalog catalog) {
+            TrackMetadataRepository metadata, TrackCatalog catalog) {
         this.playlistRepository = playlistRepository;
         this.playlistTrackRepository = playlistTrackRepository;
         this.userRepository = userRepository;
@@ -51,18 +52,18 @@ public class PlaylistService {
 
     // Chamado somente depois de autorizar a playlist em getPlaylistDetails.
     @Transactional
-    public SpotifyRoomCatalog.Track resolveRoomTrack(Long playlistId, PlaylistTrackResponse item, String email) {
+    public TrackCatalog.Track resolveRoomTrack(Long playlistId, PlaylistTrackResponse item, String email) {
         if (item.durationMs() != null && item.durationMs() > 0
                 && item.title() != null && !item.title().isBlank()
                 && item.artist() != null && !item.artist().isBlank()) {
-            return new SpotifyRoomCatalog.Track(item.trackSpotifyId(), item.title(), item.artist(), item.imageUrl(), item.durationMs());
+            return new TrackCatalog.Track(item.trackSpotifyId(), item.title(), item.artist(), item.imageUrl(), item.durationMs());
         }
         Long duration = item.durationMs();
         if (duration == null || duration <= 0) duration = savedDuration(item.trackSpotifyId());
-        SpotifyRoomCatalog.Track result;
+        TrackCatalog.Track result;
         if (duration != null && duration > 0 && item.title() != null && !item.title().isBlank()
                 && item.artist() != null && !item.artist().isBlank()) {
-            result = new SpotifyRoomCatalog.Track(item.trackSpotifyId(), item.title(), item.artist(), item.imageUrl(), duration);
+            result = new TrackCatalog.Track(item.trackSpotifyId(), item.title(), item.artist(), item.imageUrl(), duration);
         } else {
             result = catalog.track(email, item.trackSpotifyId());
             metadata.save(new TrackMetadata(result.id(), result.durationMs()));
