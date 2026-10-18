@@ -1,6 +1,7 @@
 package br.com.duotune.controller;
 
 import br.com.duotune.service.RoomService;
+import br.com.duotune.dto.RoomDtos.*;
 import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 
@@ -11,36 +12,36 @@ public class RoomController {
     public RoomController(RoomService rooms) { this.rooms = rooms; }
 
     @GetMapping
-    public RoomService.RoomInfo current(Principal principal) { return rooms.current(principal.getName()); }
+    public RoomInfo current(Principal principal) { return rooms.current(principal.getName()); }
 
     @PostMapping("/messages")
-    public RoomService.State chat(Principal principal, @RequestBody RoomService.ChatRequest request) {
+    public State chat(Principal principal, @RequestBody ChatRequest request) {
         return rooms.chat(principal.getName(), request);
     }
 
     @PostMapping("/queue")
-    public RoomService.State addTrack(Principal principal, @RequestBody RoomService.AddTrackRequest request) {
+    public State addTrack(Principal principal, @RequestBody AddTrackRequest request) {
         return rooms.addTrack(principal.getName(), request);
     }
 
     @PostMapping("/queue/playlists/{playlistId}")
-    public RoomService.State addPlaylist(Principal principal, @PathVariable Long playlistId,
-                                         @RequestBody(required = false) RoomService.AddPlaylistRequest request) {
+    public State addPlaylist(Principal principal, @PathVariable Long playlistId,
+                                         @RequestBody(required = false) AddPlaylistRequest request) {
         return rooms.addPlaylist(principal.getName(), playlistId, request);
     }
 
     @DeleteMapping("/queue/{entryId}")
-    public RoomService.State removeTrack(Principal principal, @PathVariable String entryId) {
+    public State removeTrack(Principal principal, @PathVariable String entryId) {
         return rooms.removeTrack(principal.getName(), entryId);
     }
 
     @PostMapping("/playback")
-    public RoomService.State playback(Principal principal, @RequestBody RoomService.PlaybackRequest request) {
+    public State playback(Principal principal, @RequestBody PlaybackRequest request) {
         return rooms.playback(principal.getName(), request);
     }
 
     @PostMapping("/ready")
-    public RoomService.State readiness(Principal principal, @RequestBody RoomService.ReadyRequest request) {
+    public State readiness(Principal principal, @RequestBody ReadyRequest request) {
         return rooms.readiness(principal.getName(), request);
     }
 
