@@ -1,5 +1,7 @@
 package br.com.duotune.config;
 
+import br.com.duotune.port.room.RoomSessionAccess;
+
 import br.com.duotune.repository.DuoRepository;
 import br.com.duotune.repository.UserRepository;
 import br.com.duotune.service.TokenService;
@@ -23,7 +25,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
-public class StompAccessInterceptor implements ChannelInterceptor {
+public class StompAccessInterceptor implements ChannelInterceptor, RoomSessionAccess {
     private final TokenService tokens;
     private final UserRepository users;
     private final DuoRepository duos;
@@ -87,11 +89,13 @@ public class StompAccessInterceptor implements ChannelInterceptor {
         return destination.equals("/topic/duos/" + session.duoId() + "/room");
     }
 
+    @Override
     public boolean isSessionActive(String sessionId) {
         SessionAccess session = sessions.get(sessionId);
         return session != null && session.valid();
     }
 
+    @Override
     public boolean isClientActive(Long userId, String clientId) {
         return clientId != null && sessions.values().stream().anyMatch(session ->
                 session.valid() && session.userId().equals(userId) && clientId.equals(session.clientId()));

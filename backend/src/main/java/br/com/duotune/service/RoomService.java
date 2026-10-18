@@ -1,67 +1,41 @@
 package br.com.duotune.service;
 
-import br.com.duotune.config.StompAccessInterceptor;
+import br.com.duotune.port.room.RoomSessionAccess;
+import br.com.duotune.dto.RoomDtos.*;
+import br.com.duotune.service.RoomStore.*;
+import br.com.duotune.integration.room.RoomPublisher;
 import br.com.duotune.port.music.TrackCatalog;
 import br.com.duotune.model.User;
 import br.com.duotune.repository.DuoRepository;
 import br.com.duotune.repository.UserRepository;
-import org.springframework.context.event.EventListener;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import br.com.duotune.exception.ApplicationException;
 import br.com.duotune.exception.ErrorType;
-import org.springframework.web.socket.messaging.*;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @org.springframework.scheduling.annotation.EnableScheduling
 public class RoomService {
-    public record Member(Long id, String name, String profileImageUrl) {}
-    public record ChatMessage(String id, String clientId, Long senderId, String senderName, String text, Instant sentAt) {}
-    public record QueueEntry(String id, TrackCatalog.Track track, Long addedBy) {}
-    public record ReadyUser(Long userId, String clientId) {}
-    public record Playback(long revision, boolean playing, long positionMs, long updatedAt) {}
-    public record State(Long duoId, long version, List<Long> onlineUserIds, List<ChatMessage> messages,
-                        List<QueueEntry> queue, Playback playback, List<ReadyUser> readyUsers, long serverTime) {}
-    public record AddTrackRequest(String trackId) {}
-    public record AddPlaylistRequest(List<String> trackIds) {}
-    public record PlaybackRequest(String action, Long positionMs, long revision) {}
-    public record ReadyRequest(String clientId, boolean ready) {}
-    private record ReadyLease(String clientId, long expiresAt) {}
-    public record RoomInfo(Long duoId, Long currentUserId, List<Member> members, State state) {}
-    public record ChatRequest(String clientId, String text) {}
-    private record Connection(Long userId, Set<String> subscriptions) {}
-    private static class Room {
-        long version;
-        long playbackRevision;
-        boolean playing;
-        long positionMs;
-        long updatedAt = System.currentTimeMillis();
-        final List<QueueEntry> queue = new ArrayList<>();
-        final Map<Long, ReadyLease> ready = new HashMap<>();
-        final Map<String, Connection> connections = new HashMap<>();
-        final Deque<ChatMessage> messages = new ArrayDeque<>();
-        final Map<Long, Instant> lastMessageAt = new HashMap<>();
-    }
-
     private final TrackCatalog catalog;
-    private final PlaylistService playlists;
+    private final RoomPlaylistService playlists;
     private final UserRepository users;
     private final DuoRepository duos;
-    private final SimpMessagingTemplate messaging;
-    private final StompAccessInterceptor access;
-    private final Map<Long, Room> rooms = new ConcurrentHashMap<>();
-    private final Map<String, Long> sessionRooms = new ConcurrentHashMap<>();
+    private final RoomPublisher publisher;
+    private final RoomSessionAccess access;
+    private final RoomStore rooms;
 
-    public RoomService(UserRepository users, DuoRepository duos, SimpMessagingTemplate messaging, StompAccessInterceptor access, TrackCatalog catalog, PlaylistService playlists) {
+    public RoomService(UserRepository users, DuoRepository duos, RoomPublisher publisher,
+            RoomSessionAccess access, TrackCatalog catalog, RoomPlaylistService playlists, RoomStore rooms) {
+        this.rooms = rooms;
         this.playlists = playlists;
         this.catalog = catalog;
-        this.users = users; this.duos = duos; this.messaging = messaging; this.access = access;
+        this.users = users;
+        this.duos = duos;
+        this.publisher = publisher;
+        this.access = access;
     }
 
     private User user(String email) {
@@ -77,7 +51,7 @@ public class RoomService {
         User user = user(email);
         Long id = duoId(user);
         var duo = duos.findById(id).orElseThrow(() -> new ApplicationException(ErrorType.NOT_FOUND, "Duo não encontrado."));
-        Room room = rooms.computeIfAbsent(id, key -> new Room());
+        Room room = rooms.getOrCreate(id);
         synchronized (room) {
             return new RoomInfo(id, user.getId(), List.of(member(duo.getUser1()), member(duo.getUser2())), state(id, room));
         }
@@ -93,7 +67,7 @@ public class RoomService {
         }
         try { UUID.fromString(request.clientId()); }
         catch (Exception error) { throw new ApplicationException(ErrorType.INVALID_INPUT, "Identificador da mensagem inválido. Tente novamente."); }
-        Room room = rooms.computeIfAbsent(id, key -> new Room());
+        Room room = rooms.getOrCreate(id);
         synchronized (room) {
             if (!online(room).contains(user.getId())) {
                 throw new ApplicationException(ErrorType.CONFLICT, "Conecte-se à sala antes de enviar uma mensagem.");
@@ -111,7 +85,7 @@ public class RoomService {
             while (room.messages.size() > 30) room.messages.removeFirst();
             room.version++;
             State state = state(id, room);
-            messaging.convertAndSend(destination(id), state);
+            publisher.publish(id, state);
             return state;
         }
     }
@@ -149,7 +123,7 @@ public class RoomService {
     private State publish(Long id, Room room) {
         room.version++;
         State state = state(id, room);
-        messaging.convertAndSend(destination(id), state);
+        publisher.publish(id, state);
         return state;
     }
 
@@ -160,7 +134,7 @@ public class RoomService {
     public State addTrack(String email, AddTrackRequest request) {
         User user = user(email);
         Long id = duoId(user);
-        Room room = rooms.computeIfAbsent(id, key -> new Room());
+        Room room = rooms.getOrCreate(id);
         synchronized (room) { requireOnline(room, user.getId()); }
         var track = catalog.track(email, request.trackId());
         synchronized (room) {
@@ -175,28 +149,17 @@ public class RoomService {
     public State addPlaylist(String email, Long playlistId, AddPlaylistRequest request) {
         User user = user(email);
         Long id = duoId(user);
-        Room room = rooms.computeIfAbsent(id, key -> new Room());
+        Room room = rooms.getOrCreate(id);
         synchronized (room) { requireOnline(room, user.getId()); }
 
-        // Reutiliza a autorização de acesso do dono ou parceiro e a ordem da playlist.
-        var playlist = playlists.getPlaylistDetails(playlistId, email);
-        var tracks = playlist.tracks();
-        if (request != null && request.trackIds() != null) {
-            Set<String> selected = new HashSet<>(request.trackIds());
-            if (selected.isEmpty() || selected.contains(null) || selected.size() != request.trackIds().size()
-                    || !tracks.stream().map(item -> item.trackSpotifyId()).toList().containsAll(selected)) {
-                throw new ApplicationException(ErrorType.INVALID_INPUT, "Selecione músicas válidas desta playlist. Atualize a prévia e tente novamente.");
-            }
-            tracks = tracks.stream().filter(item -> selected.contains(item.trackSpotifyId())).toList();
-        }
+        var tracks = playlists.select(playlistId, email, request == null ? null : request.trackIds());
         int count = tracks.size();
-        if (count == 0) throw new ApplicationException(ErrorType.CONFLICT, "Esta playlist está vazia.");
         synchronized (room) { requirePlaylistCapacity(room, count); }
 
         // Resolve todas as faixas antes de alterar a fila: falhas não deixam uma importação parcial.
         List<QueueEntry> entries = new ArrayList<>();
         for (var item : tracks) {
-            var track = playlists.resolveRoomTrack(playlistId, item, email);
+            var track = playlists.resolve(playlistId, item, email);
             entries.add(new QueueEntry(UUID.randomUUID().toString(), track, user.getId()));
         }
         if (!id.equals(duoId(user))) throw new ApplicationException(ErrorType.CONFLICT, "Seu Duo mudou. Entre novamente na sala.");
@@ -219,7 +182,7 @@ public class RoomService {
     public State removeTrack(String email, String entryId) {
         User user = user(email);
         Long id = duoId(user);
-        Room room = rooms.computeIfAbsent(id, key -> new Room());
+        Room room = rooms.getOrCreate(id);
         synchronized (room) {
             requireOnline(room, user.getId());
             boolean current = !room.queue.isEmpty() && room.queue.get(0).id().equals(entryId);
@@ -235,7 +198,7 @@ public class RoomService {
         Long id = duoId(user);
         if (request.clientId() == null || !request.clientId().matches("[a-fA-F0-9-]{36}"))
             throw new ApplicationException(ErrorType.INVALID_INPUT, "Identificador do player inválido.");
-        Room room = rooms.computeIfAbsent(id, key -> new Room());
+        Room room = rooms.getOrCreate(id);
         boolean verify;
         synchronized (room) {
             if (request.ready()) requireOnline(room, user.getId());
@@ -271,7 +234,7 @@ public class RoomService {
     public State playback(String email, PlaybackRequest request) {
         User user = user(email);
         Long id = duoId(user);
-        Room room = rooms.computeIfAbsent(id, key -> new Room());
+        Room room = rooms.getOrCreate(id);
         synchronized (room) {
             requireOnline(room, user.getId());
             if (request.revision() != room.playbackRevision) throw new ApplicationException(ErrorType.CONFLICT, "O player mudou. Tente novamente.");
@@ -312,37 +275,24 @@ public class RoomService {
             }
         });
     }
-    private String destination(Long id) { return "/topic/duos/" + id + "/room"; }
-
-    @EventListener
-    public void subscribed(SessionSubscribeEvent event) {
-        if (event.getUser() == null) return;
-        var headers = StompHeaderAccessor.wrap(event.getMessage());
-        User user = user(event.getUser().getName());
+    public void subscribe(String email, String destination, String sessionId, String subscriptionId) {
+        User user = user(email);
         Long id = duoId(user);
-        if (!destination(id).equals(headers.getDestination()) || headers.getSessionId() == null || headers.getSubscriptionId() == null) return;
-        Room room = rooms.computeIfAbsent(id, key -> new Room());
+        if (!publisher.isRoomDestination(id, destination) || sessionId == null || subscriptionId == null) return;
+        Room room = rooms.getOrCreate(id);
         synchronized (room) {
-            String session = headers.getSessionId();
+            String session = sessionId;
             room.connections.computeIfAbsent(session, key -> new Connection(user.getId(), new HashSet<>()))
-                    .subscriptions().add(headers.getSubscriptionId());
-            sessionRooms.put(session, id);
+                    .subscriptions().add(subscriptionId);
+            rooms.bindSession(session, id);
             room.version++;
-            messaging.convertAndSend(destination(id), state(id, room));
+            publisher.publish(id, state(id, room));
         }
     }
 
-    @EventListener
-    public void unsubscribed(SessionUnsubscribeEvent event) {
-        var headers = StompHeaderAccessor.wrap(event.getMessage());
-        leave(headers.getSessionId(), headers.getSubscriptionId());
-    }
-    @EventListener
-    public void disconnected(SessionDisconnectEvent event) { leave(event.getSessionId(), null); }
-
-    private void leave(String session, String subscription) {
+    public void leave(String session, String subscription) {
         if (session == null) return;
-        Long id = sessionRooms.get(session);
+        Long id = rooms.roomIdForSession(session);
         if (id == null) return;
         Room room = rooms.get(id);
         if (room == null) return;
@@ -353,12 +303,12 @@ public class RoomService {
             else connection.subscriptions().remove(subscription);
             if (connection.subscriptions().isEmpty()) {
                 room.connections.remove(session);
-                sessionRooms.remove(session, id);
+                rooms.unbindSession(session, id);
                 if (!online(room).contains(connection.userId())) room.ready.remove(connection.userId());
                 if (room.playing && ready(room).size() != 2) playbackChanged(room, position(room), false);
             }
             room.version++;
-            messaging.convertAndSend(destination(id), state(id, room));
+            publisher.publish(id, state(id, room));
         }
     }
 }
