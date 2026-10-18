@@ -3,6 +3,7 @@ package br.com.duotune.controller;
 import br.com.duotune.repository.DuoRepository;
 
 import java.net.URI;
+import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +17,7 @@ import br.com.duotune.dto.LoginRequest;
 import br.com.duotune.dto.RegisterRequest;
 import br.com.duotune.dto.RegisterResponse;
 import br.com.duotune.dto.UserResponse;
-import br.com.duotune.exception.dto.ErrorResponse;
+import br.com.duotune.exception.BusinessException;
 import br.com.duotune.model.User;
 import br.com.duotune.repository.UserRepository;
 import br.com.duotune.service.TokenService;
@@ -37,12 +38,10 @@ public class AuthController {
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
 
         if (repository.findByEmail(request.email()).isPresent()) {
-                return ResponseEntity.status(409).body(
-                        new ErrorResponse("EMAIL_ALREADY_EXISTS", "Já existe um usuário cadastrado com este e-mail.")
-                );
+                throw new BusinessException("EMAIL_ALREADY_EXISTS", "Já existe um usuário cadastrado com este e-mail.");
         }
 
         User user = new User();
@@ -63,13 +62,11 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         var userOptional = repository.findByEmail(request.email());
 
         if (userOptional.isEmpty() || !passwordEncoder.matches(request.password(), userOptional.get().getPasswordHash())) {
-                return ResponseEntity.status(401).body(
-                        new ErrorResponse("INVALID_CREDENTIALS", "Credenciais inválidas.")
-                );
+                throw new BusinessException("INVALID_CREDENTIALS", "Credenciais inválidas.");
         }
 
         User user = userOptional.get();

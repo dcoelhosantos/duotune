@@ -12,17 +12,15 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.server.ResponseStatusException;
+import br.com.duotune.exception.ApplicationException;
 
 import br.com.duotune.service.SpotifyOAuthService;
-import br.com.duotune.exception.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
@@ -74,7 +72,7 @@ public class SpotifyOAuthController {
                 try {
                     spotify.connect(pending.userId(), code);
                     result = "connected";
-                } catch (RestClientException | ResponseStatusException e) {
+                } catch (RestClientException | ApplicationException e) {
                     result = "error";
                 }
             }
@@ -116,15 +114,5 @@ public class SpotifyOAuthController {
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 
-    // Tratamento de exceções para retornar mensagens em português ao frontend.
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<?> error(ResponseStatusException error) {
-        return ResponseEntity.status(error.getStatusCode()).cacheControl(CacheControl.noStore())
-            .body(new ErrorResponse("SPOTIFY_REQUEST_FAILED", error.getReason() == null ? "Não foi possível processar a solicitação ao Spotify." : error.getReason()));
-    }
 
-    @ExceptionHandler(RestClientException.class)
-    public ResponseEntity<?> unavailable() {
-        return ResponseEntity.status(502).body(new ErrorResponse("SPOTIFY_UNAVAILABLE", "Não foi possível acessar o Spotify. Tente novamente."));
-    }
 }

@@ -5,12 +5,12 @@ import br.com.duotune.model.User;
 import br.com.duotune.repository.DuoRepository;
 import br.com.duotune.repository.UserRepository;
 import org.springframework.context.event.EventListener;
-import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+import br.com.duotune.exception.ApplicationException;
+import br.com.duotune.exception.ErrorType;
 import org.springframework.web.socket.messaging.*;
 
 import java.time.Instant;
@@ -64,10 +64,10 @@ public class RoomService {
     }
 
     private User user(String email) {
-        return users.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Entre novamente para acessar a sala."));
+        return users.findByEmail(email).orElseThrow(() -> new ApplicationException(ErrorType.UNAUTHENTICATED, "Entre novamente para acessar a sala."));
     }
     private Long duoId(User user) {
-        return duos.findActiveDuoId(user.getId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Forme um Duo para entrar na sala musical."));
+        return duos.findActiveDuoId(user.getId()).orElseThrow(() -> new ApplicationException(ErrorType.CONFLICT, "Forme um Duo para entrar na sala musical."));
     }
     private Member member(User user) { return new Member(user.getId(), user.getName(), user.getProfileImageUrl()); }
 
@@ -75,7 +75,7 @@ public class RoomService {
     public RoomInfo current(String email) {
         User user = user(email);
         Long id = duoId(user);
-        var duo = duos.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Duo não encontrado."));
+        var duo = duos.findById(id).orElseThrow(() -> new ApplicationException(ErrorType.NOT_FOUND, "Duo não encontrado."));
         Room room = rooms.computeIfAbsent(id, key -> new Room());
         synchronized (room) {
             return new RoomInfo(id, user.getId(), List.of(member(duo.getUser1()), member(duo.getUser2())), state(id, room));
@@ -88,14 +88,14 @@ public class RoomService {
         Long id = duoId(user);
         String text = request.text() == null ? "" : request.text().strip();
         if (text.isEmpty() || text.length() > 800) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escreva uma mensagem de até 800 caracteres.");
+            throw new ApplicationException(ErrorType.INVALID_INPUT, "Escreva uma mensagem de até 800 caracteres.");
         }
         try { UUID.fromString(request.clientId()); }
-        catch (Exception error) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador da mensagem inválido. Tente novamente."); }
+        catch (Exception error) { throw new ApplicationException(ErrorType.INVALID_INPUT, "Identificador da mensagem inválido. Tente novamente."); }
         Room room = rooms.computeIfAbsent(id, key -> new Room());
         synchronized (room) {
             if (!online(room).contains(user.getId())) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Conecte-se à sala antes de enviar uma mensagem.");
+                throw new ApplicationException(ErrorType.CONFLICT, "Conecte-se à sala antes de enviar uma mensagem.");
             }
             if (room.messages.stream().anyMatch(message -> message.senderId().equals(user.getId()) && message.clientId().equals(request.clientId()))) {
                 return state(id, room);
@@ -103,7 +103,7 @@ public class RoomService {
             Instant now = Instant.now();
             Instant previous = room.lastMessageAt.get(user.getId());
             if (previous != null && previous.plusMillis(500).isAfter(now)) {
-                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Aguarde um instante antes de enviar outra mensagem.");
+                throw new ApplicationException(ErrorType.RATE_LIMITED, "Aguarde um instante antes de enviar outra mensagem.");
             }
             room.lastMessageAt.put(user.getId(), now);
             room.messages.addLast(new ChatMessage(UUID.randomUUID().toString(), request.clientId(), user.getId(), user.getName(), text, now));
@@ -153,7 +153,7 @@ public class RoomService {
     }
 
     private void requireOnline(Room room, Long userId) {
-        if (!online(room).contains(userId)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Entre na sala para alterar a fila ou o player.");
+        if (!online(room).contains(userId)) throw new ApplicationException(ErrorType.CONFLICT, "Entre na sala para alterar a fila ou o player.");
     }
 
     public State addTrack(String email, AddTrackRequest request) {
@@ -164,7 +164,7 @@ public class RoomService {
         var track = catalog.track(email, request.trackId());
         synchronized (room) {
             requireOnline(room, user.getId());
-            if (room.queue.size() >= 99) throw new ResponseStatusException(HttpStatus.CONFLICT, "A fila comporta até 99 músicas.");
+            if (room.queue.size() >= 99) throw new ApplicationException(ErrorType.CONFLICT, "A fila comporta até 99 músicas.");
             room.queue.add(new QueueEntry(UUID.randomUUID().toString(), track, user.getId()));
             if (room.queue.size() == 1) playbackChanged(room, 0, false);
             return publish(id, room);
@@ -184,12 +184,12 @@ public class RoomService {
             Set<String> selected = new HashSet<>(request.trackIds());
             if (selected.isEmpty() || selected.contains(null) || selected.size() != request.trackIds().size()
                     || !tracks.stream().map(item -> item.trackSpotifyId()).toList().containsAll(selected)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecione músicas válidas desta playlist. Atualize a prévia e tente novamente.");
+                throw new ApplicationException(ErrorType.INVALID_INPUT, "Selecione músicas válidas desta playlist. Atualize a prévia e tente novamente.");
             }
             tracks = tracks.stream().filter(item -> selected.contains(item.trackSpotifyId())).toList();
         }
         int count = tracks.size();
-        if (count == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta playlist está vazia.");
+        if (count == 0) throw new ApplicationException(ErrorType.CONFLICT, "Esta playlist está vazia.");
         synchronized (room) { requirePlaylistCapacity(room, count); }
 
         // Resolve todas as faixas antes de alterar a fila: falhas não deixam uma importação parcial.
@@ -198,7 +198,7 @@ public class RoomService {
             var track = playlists.resolveRoomTrack(playlistId, item, email);
             entries.add(new QueueEntry(UUID.randomUUID().toString(), track, user.getId()));
         }
-        if (!id.equals(duoId(user))) throw new ResponseStatusException(HttpStatus.CONFLICT, "Seu Duo mudou. Entre novamente na sala.");
+        if (!id.equals(duoId(user))) throw new ApplicationException(ErrorType.CONFLICT, "Seu Duo mudou. Entre novamente na sala.");
         synchronized (room) {
             requireOnline(room, user.getId());
             requirePlaylistCapacity(room, count);
@@ -211,7 +211,7 @@ public class RoomService {
 
     private void requirePlaylistCapacity(Room room, int count) {
         int available = 99 - room.queue.size();
-        if (count > available) throw new ResponseStatusException(HttpStatus.CONFLICT,
+        if (count > available) throw new ApplicationException(ErrorType.CONFLICT,
                 "A seleção tem " + count + " músicas e restam " + available + " vagas na fila (limite de 99). Nenhuma música foi adicionada.");
     }
 
@@ -233,7 +233,7 @@ public class RoomService {
         User user = user(email);
         Long id = duoId(user);
         if (request.clientId() == null || !request.clientId().matches("[a-fA-F0-9-]{36}"))
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador do player inválido.");
+            throw new ApplicationException(ErrorType.INVALID_INPUT, "Identificador do player inválido.");
         Room room = rooms.computeIfAbsent(id, key -> new Room());
         boolean verify;
         synchronized (room) {
@@ -246,15 +246,15 @@ public class RoomService {
             if (request.ready()) {
                 requireOnline(room, user.getId());
                 if (!access.isClientActive(user.getId(), request.clientId()))
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Reconecte esta aba à sala antes de habilitar o áudio.");
+                    throw new ApplicationException(ErrorType.CONFLICT, "Reconecte esta aba à sala antes de habilitar o áudio.");
                 var existing = room.ready.get(user.getId());
                 if (existing != null && existing.expiresAt() > System.currentTimeMillis() && !existing.clientId().equals(request.clientId()))
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Seu áudio já está habilitado em outra aba. Saia da sala nessa aba primeiro.");
+                    throw new ApplicationException(ErrorType.CONFLICT, "Seu áudio já está habilitado em outra aba. Saia da sala nessa aba primeiro.");
                 for (var participant : ready(room)) {
                     if (!participant.userId().equals(user.getId())) {
                         var partner = users.findById(participant.userId()).orElse(null);
                         if (partner != null && user.getSpotifyId() != null && user.getSpotifyId().equals(partner.getSpotifyId()))
-                            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cada participante deve conectar sua própria conta Spotify Premium.");
+                            throw new ApplicationException(ErrorType.CONFLICT, "Cada participante deve conectar sua própria conta Spotify Premium.");
                     }
                 }
                 room.ready.put(user.getId(), new ReadyLease(request.clientId(), System.currentTimeMillis() + 90000));
@@ -273,23 +273,23 @@ public class RoomService {
         Room room = rooms.computeIfAbsent(id, key -> new Room());
         synchronized (room) {
             requireOnline(room, user.getId());
-            if (request.revision() != room.playbackRevision) throw new ResponseStatusException(HttpStatus.CONFLICT, "O player mudou. Tente novamente.");
+            if (request.revision() != room.playbackRevision) throw new ApplicationException(ErrorType.CONFLICT, "O player mudou. Tente novamente.");
             if (!"PAUSE".equals(request.action()) && ready(room).size() != 2)
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Os dois precisam estar na sala com seus players Spotify Premium disponíveis.");
-            if (room.queue.isEmpty()) throw new ResponseStatusException(HttpStatus.CONFLICT, "Adicione uma música à fila.");
+                throw new ApplicationException(ErrorType.CONFLICT, "Os dois precisam estar na sala com seus players Spotify Premium disponíveis.");
+            if (room.queue.isEmpty()) throw new ApplicationException(ErrorType.CONFLICT, "Adicione uma música à fila.");
             switch (request.action() == null ? "" : request.action()) {
                 case "PLAY" -> playbackChanged(room, position(room), true);
                 case "PAUSE" -> playbackChanged(room, position(room), false);
                 case "SEEK" -> {
                     if (request.positionMs() == null || request.positionMs() < 0 || request.positionMs() >= room.queue.get(0).track().durationMs())
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Posição da música inválida.");
+                        throw new ApplicationException(ErrorType.INVALID_INPUT, "Posição da música inválida.");
                     playbackChanged(room, request.positionMs(), room.playing);
                 }
                 case "NEXT" -> {
                     room.queue.remove(0);
                     playbackChanged(room, 0, room.playing && !room.queue.isEmpty());
                 }
-                default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Comando de reprodução inválido.");
+                default -> throw new ApplicationException(ErrorType.INVALID_INPUT, "Comando de reprodução inválido.");
             }
             return publish(id, room);
         }

@@ -10,10 +10,10 @@ import br.com.duotune.repository.DuoRepository;
 import br.com.duotune.repository.UserRepository;
 
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+import br.com.duotune.exception.ApplicationException;
+import br.com.duotune.exception.ErrorType;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -38,7 +38,7 @@ public class DuoDedicationService {
         User sender = userRepository.findByEmail(email).orElseThrow();
 
         Long activeDuoId = duoRepository.findActiveDuoId(sender.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Você não possui um Duo ativo."));
+                .orElseThrow(() -> new ApplicationException(ErrorType.FORBIDDEN, "Você não possui um Duo ativo."));
 
         Duo duo = duoRepository.findById(activeDuoId).orElseThrow();
         User receiver = duo.getUser1().getId().equals(sender.getId()) ? duo.getUser2() : duo.getUser1();
@@ -46,14 +46,14 @@ public class DuoDedicationService {
         // Garante que o fuso horário seja respeitado na validação
         LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
         if (!request.scheduledDate().isAfter(today)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A data da surpresa deve ser no futuro.");
+            throw new ApplicationException(ErrorType.INVALID_INPUT, "A data da surpresa deve ser no futuro.");
         }
 
         // Trava de leitura preventiva
         boolean alreadyScheduled = dedicationRepository.existsByReceiverIdAndScheduledDate(receiver.getId(),
                 request.scheduledDate());
         if (alreadyScheduled) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Você já programou uma surpresa para este dia.");
+            throw new ApplicationException(ErrorType.CONFLICT, "Você já programou uma surpresa para este dia.");
         }
 
         DuoDedication dedication = new DuoDedication();
@@ -71,10 +71,11 @@ public class DuoDedicationService {
             dedicationRepository.save(dedication);
         } catch (DataIntegrityViolationException e) {
             if (e.getMostSpecificCause() != null
+                    && e.getMostSpecificCause().getMessage() != null
                     && e.getMostSpecificCause().getMessage().contains("uk_receiver_date")) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Você já programou uma surpresa para este dia.");
+                throw new ApplicationException(ErrorType.CONFLICT, "Você já programou uma surpresa para este dia.");
             }
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao processar a dedicatória.");
+            throw new ApplicationException(ErrorType.INTERNAL_FAILURE, "Erro ao processar a dedicatória.");
         }
     }
 
@@ -116,10 +117,10 @@ public class DuoDedicationService {
     @Transactional
     public void confirmDelivery(String email, Long dedicationId) {
         DuoDedication dedication = dedicationRepository.findById(dedicationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Surpresa não encontrada."));
+                .orElseThrow(() -> new ApplicationException(ErrorType.NOT_FOUND, "Surpresa não encontrada."));
 
         if (!dedication.getReceiver().getEmail().equals(email)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado.");
+            throw new ApplicationException(ErrorType.FORBIDDEN, "Acesso negado.");
         }
 
         dedication.setDelivered(true);
@@ -162,11 +163,11 @@ public class DuoDedicationService {
     @Transactional
     public void deleteDedication(String email, Long dedicationId) {
         DuoDedication dedication = dedicationRepository.findById(dedicationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dedicatória não encontrada."));
+                .orElseThrow(() -> new ApplicationException(ErrorType.NOT_FOUND, "Dedicatória não encontrada."));
 
         // Apenas quem enviou pode apagar
         if (!dedication.getSender().getEmail().equals(email)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+            throw new ApplicationException(ErrorType.FORBIDDEN,
                     "Você não tem permissão para excluir esta dedicatória.");
         }
 

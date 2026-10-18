@@ -47,15 +47,16 @@ public class SecurityConfig {
                 .permitAll()
                 .anyRequest().authenticated()
             )
-            .exceptionHandling(errors -> errors.defaultAuthenticationEntryPointFor(
+            .exceptionHandling(errors -> errors.authenticationEntryPoint(
                 (request, response, exception) -> {
                     response.setStatus(401);
                     response.setContentType("application/json;charset=UTF-8");
                     response.getWriter().write("{\"code\":\"UNAUTHORIZED\",\"message\":\"Entre na sua conta para continuar.\"}");
-                },
-                request -> request.getServletPath().equals("/api/v1/duos")
-                    || request.getServletPath().startsWith("/api/v1/duos/")
-                    || request.getServletPath().startsWith("/api/v1/rooms/")
+                }).accessDeniedHandler((request, response, exception) -> {
+                    response.setStatus(403);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"code\":\"FORBIDDEN\",\"message\":\"Você não tem permissão para realizar esta ação.\"}");
+                }
             ))
             .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
 

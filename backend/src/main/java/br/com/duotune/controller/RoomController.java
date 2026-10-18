@@ -1,10 +1,7 @@
 package br.com.duotune.controller;
 
-import br.com.duotune.exception.dto.ErrorResponse;
 import br.com.duotune.service.RoomService;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import java.security.Principal;
 
 @RestController
@@ -32,13 +29,6 @@ public class RoomController {
         return rooms.addPlaylist(principal.getName(), playlistId, request);
     }
 
-    @ExceptionHandler(br.com.duotune.exception.BusinessException.class)
-    public ResponseEntity<ErrorResponse> playlistError(br.com.duotune.exception.BusinessException error) {
-        int status = "UNAUTHORIZED_ACTION".equals(error.getCode()) ? 403
-                : "PLAYLIST_NOT_FOUND".equals(error.getCode()) ? 404 : 400;
-        return ResponseEntity.status(status).body(new ErrorResponse(error.getCode(), error.getMessage()));
-    }
-
     @DeleteMapping("/queue/{entryId}")
     public RoomService.State removeTrack(Principal principal, @PathVariable String entryId) {
         return rooms.removeTrack(principal.getName(), entryId);
@@ -54,8 +44,4 @@ public class RoomController {
         return rooms.readiness(principal.getName(), request);
     }
 
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<ErrorResponse> error(ResponseStatusException error) {
-        return ResponseEntity.status(error.getStatusCode()).body(new ErrorResponse("ROOM_REQUEST_FAILED", error.getReason()));
-    }
 }

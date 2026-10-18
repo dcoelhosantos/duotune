@@ -8,7 +8,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
-import org.springframework.web.server.ResponseStatusException;
+import br.com.duotune.exception.ApplicationException;
+import br.com.duotune.exception.ErrorType;
 import java.time.Instant;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -38,14 +39,14 @@ class MusicalMatchServiceTest {
     }
     @Test void unpairedUserCannotReadOrCalculateAnotherDuosMatch() {
         when(duos.findActiveDuoId(1L)).thenReturn(Optional.empty());
-        assertEquals(404, assertThrows(ResponseStatusException.class, () -> service.overview(first.getEmail())).getStatusCode().value());
-        assertThrows(ResponseStatusException.class, () -> service.calculate(first.getEmail()));
+        assertEquals(ErrorType.NOT_FOUND, assertThrows(ApplicationException.class, () -> service.overview(first.getEmail())).getType());
+        assertThrows(ApplicationException.class, () -> service.calculate(first.getEmail()));
         verifyNoInteractions(matches, spotify);
     }
     @Test void failedOrEmptySpotifyHistoryDoesNotOverwriteSavedResults() {
         when(spotify.recent(first)).thenReturn(List.of());
         when(spotify.recent(second)).thenReturn(List.of());
-        assertEquals(422, assertThrows(ResponseStatusException.class, () -> service.calculate(first.getEmail())).getStatusCode().value());
+        assertEquals(ErrorType.UNPROCESSABLE, assertThrows(ApplicationException.class, () -> service.calculate(first.getEmail())).getType());
         verify(matches, never()).save(any());
     }
     @Test void storesBothSamplesAndReturnsOnlySharedItems() {

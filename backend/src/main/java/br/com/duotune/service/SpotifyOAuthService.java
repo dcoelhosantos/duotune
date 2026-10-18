@@ -7,13 +7,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.server.ResponseStatusException;
+import br.com.duotune.exception.ApplicationException;
+import br.com.duotune.exception.ErrorType;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import br.com.duotune.model.User;
@@ -49,7 +49,7 @@ public class SpotifyOAuthService {
 
     // Busca o usuário do DuoTune pelo e-mail da autenticação.
     public User user(String email) {
-        return users.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não encontrado. Entre novamente no DuoTune."));
+        return users.findByEmail(email).orElseThrow(() -> new ApplicationException(ErrorType.UNAUTHENTICATED, "Usuário não encontrado. Entre novamente no DuoTune."));
     }
 
     // Monta a URL de autorização com as permissões e o state que será validado no retorno.
@@ -74,7 +74,7 @@ public class SpotifyOAuthService {
     @SuppressWarnings("rawtypes")
     private void saveTokens(User user, Map tokens) {
         if (tokens == null || !(tokens.get("access_token") instanceof String) || !(tokens.get("expires_in") instanceof Number)) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Resposta inválida do Spotify.");
+            throw new ApplicationException(ErrorType.INTEGRATION_FAILURE, "Resposta inválida do Spotify.");
         }
         user.setSpotifyAccessToken((String) tokens.get("access_token"));
         // Mantém o refresh token anterior quando o Spotify não envia um substituto.
@@ -86,20 +86,20 @@ public class SpotifyOAuthService {
     // Troca o código autorizado por tokens e vincula a conta Spotify ao usuário do DuoTune.
     // A sincronização evita trocas simultâneas nesta instância do serviço.
     public synchronized void connect(Long userId, String code) {
-        var user = users.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não encontrado. Entre novamente no DuoTune."));
+        var user = users.findById(userId).orElseThrow(() -> new ApplicationException(ErrorType.UNAUTHENTICATED, "Usuário não encontrado. Entre novamente no DuoTune."));
         var form = new LinkedMultiValueMap<String, String>();
         form.add("grant_type", "authorization_code");
         form.add("code", code);
         form.add("redirect_uri", redirectUri);
         var tokens = exchange(form);
         if (tokens == null || !(tokens.get("refresh_token") instanceof String)) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Reconecte sua conta Spotify.");
+            throw new ApplicationException(ErrorType.INTEGRATION_FAILURE, "Reconecte sua conta Spotify.");
         }
         // Consulta o perfil autorizado para salvar o identificador da conta Spotify.
         var headers = new HttpHeaders();
         headers.setBearerAuth((String) tokens.get("access_token"));
         var profile = http.exchange("https://api.spotify.com/v1/me", HttpMethod.GET, new HttpEntity<>(headers), Map.class).getBody();
-        if (profile == null || profile.get("id") == null) throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Não foi possível identificar sua conta Spotify.");
+        if (profile == null || profile.get("id") == null) throw new ApplicationException(ErrorType.INTEGRATION_FAILURE, "Não foi possível identificar sua conta Spotify.");
         user.setSpotifyId(profile.get("id").toString());
         saveTokens(user, tokens);
     }
@@ -117,7 +117,7 @@ public class SpotifyOAuthService {
     // Retorna o token atual ou renova quando solicitado ou próximo do vencimento.
     public synchronized Map<String, Object> token(String email, boolean force) {
         var user = user(email);
-        if (user.getSpotifyRefreshToken() == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "Conecte sua conta Spotify no perfil.");
+        if (user.getSpotifyRefreshToken() == null) throw new ApplicationException(ErrorType.CONFLICT, "Conecte sua conta Spotify no perfil.");
         // Renova com um minuto de antecedência para não entregar um token prestes a vencer.
         if (force || user.getSpotifyExpiresAt() == null || user.getSpotifyExpiresAt().isBefore(Instant.now().plusSeconds(60))) {
             var form = new LinkedMultiValueMap<String, String>();
@@ -129,13 +129,13 @@ public class SpotifyOAuthService {
                 // Só remove o vínculo quando o Spotify confirma que a autorização foi invalidada.
                 var failure = e.getResponseBodyAs(Map.class);
                 if (failure == null || !"invalid_grant".equals(failure.get("error"))) {
-                    throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Não foi possível renovar o acesso ao Spotify. Tente novamente.");
+                    throw new ApplicationException(ErrorType.INTEGRATION_FAILURE, "Não foi possível renovar o acesso ao Spotify. Tente novamente.");
                 }
                 user.setSpotifyAccessToken(null);
                 user.setSpotifyRefreshToken(null);
                 user.setSpotifyExpiresAt(null);
                 users.save(user);
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "A conexão expirou. Conecte o Spotify novamente.");
+                throw new ApplicationException(ErrorType.CONFLICT, "A conexão expirou. Conecte o Spotify novamente.");
             }
         }
         // O SDK recebe apenas o access token; o refresh token permanece no backend.

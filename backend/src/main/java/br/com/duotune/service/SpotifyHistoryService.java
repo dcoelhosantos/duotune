@@ -8,7 +8,8 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.client.*;
-import org.springframework.web.server.ResponseStatusException;
+import br.com.duotune.exception.ApplicationException;
+import br.com.duotune.exception.ErrorType;
 import java.time.Instant;
 import java.util.*;
 
@@ -47,19 +48,19 @@ public class SpotifyHistoryService {
                 return fetch(user, true);
             }
         } catch (HttpClientErrorException.Forbidden denied) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
+            throw new ApplicationException(ErrorType.CONFLICT,
                     user.getName() + " precisa autorizar a leitura do histórico. Reconecte o Spotify no perfil dessa pessoa. Se persistir, verifique o acesso da conta ao aplicativo Spotify.");
         } catch (HttpClientErrorException.TooManyRequests limited) {
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+            throw new ApplicationException(ErrorType.RATE_LIMITED,
                     "O Spotify limitou as consultas. Aguarde alguns minutos antes de tentar novamente.");
-        } catch (ResponseStatusException error) {
-            if (error.getStatusCode().value() == 409) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
+        } catch (ApplicationException error) {
+            if (error.getType() == ErrorType.CONFLICT) {
+                throw new ApplicationException(ErrorType.CONFLICT,
                         user.getName() + " precisa conectar ou reconectar o Spotify no próprio perfil.");
             }
             throw error;
         } catch (RestClientException error) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+            throw new ApplicationException(ErrorType.INTEGRATION_FAILURE,
                     "Não foi possível consultar o Spotify. Tente novamente em instantes.");
         }
     }
@@ -95,7 +96,7 @@ public class SpotifyHistoryService {
         return List.copyOf(unique.values());
     }
 
-    private static ResponseStatusException invalidResponse() {
-        return new ResponseStatusException(HttpStatus.BAD_GATEWAY, "O Spotify retornou um histórico inválido. Tente novamente.");
+    private static ApplicationException invalidResponse() {
+        return new ApplicationException(ErrorType.INTEGRATION_FAILURE, "O Spotify retornou um histórico inválido. Tente novamente.");
     }
 }
