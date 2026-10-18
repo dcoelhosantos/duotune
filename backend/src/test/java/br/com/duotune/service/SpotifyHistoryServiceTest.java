@@ -3,7 +3,8 @@ package br.com.duotune.service;
 
 
 import org.junit.jupiter.api.Test;
-import org.springframework.web.server.ResponseStatusException;
+import br.com.duotune.exception.ApplicationException;
+import br.com.duotune.exception.ErrorType;
 import java.util.List;
 import java.util.Map;
 import br.com.duotune.model.User;
@@ -47,9 +48,9 @@ class SpotifyHistoryServiceTest {
         var user = new User(); user.setEmail("test@example.com"); user.setName("Pessoa do Duo");
         when(oauth.token(user.getEmail(), false)).thenReturn(Map.of("access_token", "token"));
         server.expect(anything()).andRespond(withStatus(HttpStatus.FORBIDDEN));
-        var error = assertThrows(ResponseStatusException.class, () -> new SpotifyHistoryService(oauth, http).recent(user));
-        assertEquals(409, error.getStatusCode().value());
-        assertTrue(error.getReason().contains("Pessoa do Duo"));
+        var error = assertThrows(ApplicationException.class, () -> new SpotifyHistoryService(oauth, http).recent(user));
+        assertEquals(ErrorType.CONFLICT, error.getType());
+        assertTrue(error.getMessage().contains("Pessoa do Duo"));
         server.verify();
     }
 
@@ -66,8 +67,8 @@ class SpotifyHistoryServiceTest {
     }
     @Test void distinguishesAnEmptyHistoryFromAnInvalidResponse() {
         assertTrue(SpotifyHistoryService.parse(new Page(List.of())).isEmpty());
-        assertThrows(ResponseStatusException.class, () -> SpotifyHistoryService.parse(new Page(null)));
+        assertThrows(ApplicationException.class, () -> SpotifyHistoryService.parse(new Page(null)));
         var badDate = new Item(new Track("id", "name", false, List.of(new Artist("id", "name"))), "invalid");
-        assertThrows(ResponseStatusException.class, () -> SpotifyHistoryService.parse(new Page(List.of(badDate))));
+        assertThrows(ApplicationException.class, () -> SpotifyHistoryService.parse(new Page(List.of(badDate))));
     }
 }

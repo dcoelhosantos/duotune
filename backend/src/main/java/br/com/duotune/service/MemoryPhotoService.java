@@ -11,11 +11,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 import java.util.regex.Pattern;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
+import br.com.duotune.exception.ApplicationException;
+import br.com.duotune.exception.ErrorType;
 
 @Service
 public class MemoryPhotoService {
@@ -47,7 +47,7 @@ public class MemoryPhotoService {
             String trackTitle, String trackArtist, String trackImageUrl) throws IOException {
         User user = user(email);
         Duo duo = duos.findActiveDuoByUserId(user.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                .orElseThrow(() -> new ApplicationException(ErrorType.CONFLICT,
                         "Forme um Duo para criar um álbum de memórias."));
 
         String normalizedTrackId = trackSpotifyId == null ? "" : trackSpotifyId.strip();
@@ -57,14 +57,14 @@ public class MemoryPhotoService {
                 ? null : trackImageUrl.strip();
 
         if (!SPOTIFY_TRACK_ID.matcher(normalizedTrackId).matches()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecione uma música válida do Spotify.");
+            throw new ApplicationException(ErrorType.INVALID_INPUT, "Selecione uma música válida do Spotify.");
         }
         if (normalizedTitle.isEmpty() || normalizedTitle.length() > 255 ||
                 normalizedArtist.isEmpty() || normalizedArtist.length() > 255) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A música selecionada não tem título ou artista válido.");
+            throw new ApplicationException(ErrorType.INVALID_INPUT, "A música selecionada não tem título ou artista válido.");
         }
         if (normalizedImageUrl != null && (normalizedImageUrl.length() > 512 || !isHttpUrl(normalizedImageUrl))) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A capa da música tem uma URL inválida.");
+            throw new ApplicationException(ErrorType.INVALID_INPUT, "A capa da música tem uma URL inválida.");
         }
 
         MemoryPhoto memory = new MemoryPhoto();
@@ -82,20 +82,20 @@ public class MemoryPhotoService {
     public void delete(String email, Long id) {
         Duo duo = activeDuo(email);
         MemoryPhoto memory = memories.findByIdAndDuoId(id, duo.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Memória não encontrada."));
+                .orElseThrow(() -> new ApplicationException(ErrorType.NOT_FOUND, "Memória não encontrada."));
         memories.delete(memory);
     }
 
     private Duo activeDuo(String email) {
         User user = user(email);
         return duos.findActiveDuoByUserId(user.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                .orElseThrow(() -> new ApplicationException(ErrorType.CONFLICT,
                         "Forme um Duo para acessar o álbum de memórias."));
     }
 
     private User user(String email) {
         return users.findByEmail(email).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não encontrado. Entre novamente no DuoTune."));
+                new ApplicationException(ErrorType.UNAUTHENTICATED, "Usuário não encontrado. Entre novamente no DuoTune."));
     }
 
     private boolean isHttpUrl(String value) {

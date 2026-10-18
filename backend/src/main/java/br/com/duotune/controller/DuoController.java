@@ -1,9 +1,7 @@
 package br.com.duotune.controller;
 
-import br.com.duotune.exception.BusinessException;
-import br.com.duotune.exception.dto.ErrorResponse;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import br.com.duotune.dto.DuoResponse;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import br.com.duotune.dto.InvitationRequest;
 import br.com.duotune.dto.InvitationResponse;
 import br.com.duotune.service.DuoService;
@@ -28,35 +26,17 @@ public class DuoController {
     @GetMapping("/invitations/pending")
     public ResponseEntity<InvitationResponse> pendingInvitation(Principal principal) {
         if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new InsufficientAuthenticationException("Entre na sua conta para continuar.");
         }
         InvitationResponse invitation = duoService.pendingInvitation(principal.getName());
         return invitation == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(invitation);
-    }
-
-    @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponse> businessError(BusinessException error) {
-        HttpStatus status = switch (error.getCode()) {
-            case "USER_NOT_FOUND", "INVITATION_NOT_FOUND" -> HttpStatus.NOT_FOUND;
-            case "INVALID_INVITATION", "UNAUTHORIZED_ACTION" -> HttpStatus.FORBIDDEN;
-            case "SELF_INVITATION", "INVALID_OPERATION" -> HttpStatus.BAD_REQUEST;
-            default -> HttpStatus.CONFLICT;
-        };
-        return ResponseEntity.status(status).body(new ErrorResponse(error.getCode(), error.getMessage()));
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> invalidRequest(MethodArgumentNotValidException error) {
-        var field = error.getBindingResult().getFieldError();
-        return ResponseEntity.badRequest().body(new ErrorResponse("INVALID_EMAIL",
-                field == null ? "Informe um e-mail válido." : field.getDefaultMessage()));
     }
 
     @PostMapping("/invitations")
     public ResponseEntity<InvitationResponse> createInvitation(@Valid @RequestBody InvitationRequest request,
             Principal principal) {
         if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new InsufficientAuthenticationException("Entre na sua conta para continuar.");
         }
 
         String authenticatedEmail = principal.getName();
@@ -67,7 +47,7 @@ public class DuoController {
     @PostMapping("/invitations/{code}/accept")
     public ResponseEntity<DuoResponse> acceptInvitation(@PathVariable String code, Principal principal) {
         if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new InsufficientAuthenticationException("Entre na sua conta para continuar.");
         }
 
         String authenticatedEmail = principal.getName();
@@ -78,7 +58,7 @@ public class DuoController {
     @GetMapping("/invitations/{code}/status")
     public ResponseEntity<Map<String, String>> checkInvitationStatus(@PathVariable String code, Principal principal) {
         if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new InsufficientAuthenticationException("Entre na sua conta para continuar.");
         }
         String status = duoService.checkInvitationStatus(code, principal.getName());
         return ResponseEntity.ok(Map.of("status", status));
@@ -87,7 +67,7 @@ public class DuoController {
     @DeleteMapping("/invitations/{code}")
     public ResponseEntity<Void> cancelInvitation(@PathVariable String code, Principal principal) {
         if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new InsufficientAuthenticationException("Entre na sua conta para continuar.");
         }
 
         String authenticatedEmail = principal.getName();
@@ -99,7 +79,7 @@ public class DuoController {
     @GetMapping("/active")
     public ResponseEntity<DuoResponse> getActiveDuo(Principal principal) {
         if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new InsufficientAuthenticationException("Entre na sua conta para continuar.");
         }
         DuoResponse response = duoService.getActiveDuo(principal.getName());
         return ResponseEntity.ok(response);
@@ -108,7 +88,7 @@ public class DuoController {
     @DeleteMapping("/active")
     public ResponseEntity<Void> terminateActiveDuo(Principal principal) {
         if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new InsufficientAuthenticationException("Entre na sua conta para continuar.");
         }
         duoService.terminateActiveDuo(principal.getName());
         return ResponseEntity.noContent().build();

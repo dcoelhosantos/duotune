@@ -10,11 +10,11 @@ import br.com.duotune.model.Duo;
 import br.com.duotune.model.User;
 import br.com.duotune.repository.DuoRepository;
 import br.com.duotune.repository.UserRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.web.server.ResponseStatusException;
+import br.com.duotune.exception.ApplicationException;
+import br.com.duotune.exception.ErrorType;
 import java.util.*;
 
 @Service
@@ -36,10 +36,10 @@ public class MusicalMatchService {
 
     // O cliente nunca escolhe o casal ou os usuários consultados.
     private Duo activeDuo(String email) {
-        User user = users.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        User user = users.findByEmail(email).orElseThrow(() -> new ApplicationException(ErrorType.UNAUTHENTICATED));
         Long id = duos.findActiveDuoId(user.getId()).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Forme seu Duo para descobrir o match musical."));
-        return duos.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                new ApplicationException(ErrorType.NOT_FOUND, "Forme seu Duo para descobrir o match musical."));
+        return duos.findById(id).orElseThrow(() -> new ApplicationException(ErrorType.NOT_FOUND));
     }
 
     public MatchResponse.Overview overview(String email) {
@@ -57,13 +57,13 @@ public class MusicalMatchService {
         List<RecentPlay> first = spotify.recent(duo.getUser1());
         List<RecentPlay> second = spotify.recent(duo.getUser2());
         if (first.isEmpty() || second.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+            throw new ApplicationException(ErrorType.UNPROCESSABLE,
                     "Dados insuficientes: os dois precisam ter músicas no histórico recente do Spotify. Ouçam algumas faixas e tentem novamente.");
         }
         var score = MatchCalculator.calculate(first, second);
         return transactions.execute(status -> {
             Duo current = activeDuo(email);
-            if (!current.getId().equals(duo.getId())) throw new ResponseStatusException(HttpStatus.CONFLICT,
+            if (!current.getId().equals(duo.getId())) throw new ApplicationException(ErrorType.CONFLICT,
                     "Seu Duo mudou durante o cálculo. Atualize a página.");
             MusicalMatch match = new MusicalMatch(current, score);
             first.forEach(play -> match.getEntries().add(new MatchListeningEntry(match, current.getUser1(), play)));
