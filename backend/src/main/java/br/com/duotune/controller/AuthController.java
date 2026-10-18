@@ -1,13 +1,8 @@
 package br.com.duotune.controller;
 
-import br.com.duotune.repository.DuoRepository;
-
 import java.net.URI;
-import jakarta.validation.Valid;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,67 +11,28 @@ import org.springframework.web.bind.annotation.RestController;
 import br.com.duotune.dto.LoginRequest;
 import br.com.duotune.dto.RegisterRequest;
 import br.com.duotune.dto.RegisterResponse;
-import br.com.duotune.dto.UserResponse;
-import br.com.duotune.exception.BusinessException;
-import br.com.duotune.model.User;
-import br.com.duotune.repository.UserRepository;
-import br.com.duotune.service.TokenService;
+import br.com.duotune.service.AuthService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
-    @Autowired
-    private UserRepository repository;
+    private final AuthService authService;
 
-    @Autowired 
-    private TokenService tokenService;
-
-    @Autowired
-    private DuoRepository duos;
-
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
-
-        if (repository.findByEmail(request.email()).isPresent()) {
-                throw new BusinessException("EMAIL_ALREADY_EXISTS", "Já existe um usuário cadastrado com este e-mail.");
-        }
-
-        User user = new User();
-        user.setName(request.name());
-        user.setEmail(request.email());
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
-
-        User savedUser = repository.save(user);
-
-        UserResponse userResponse = new UserResponse(
-                savedUser.getId(), savedUser.getName(), savedUser.getEmail(),
-                savedUser.getProfileImageUrl(), savedUser.getCreatedAt());
-
-        String token = tokenService.generateToken(savedUser.getEmail());
-        RegisterResponse response = new RegisterResponse(userResponse, token, 7200L);
-
-        return ResponseEntity.created(URI.create("/api/v1/users/" + savedUser.getId())).body(response);
+    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
+        RegisterResponse response = authService.register(request);
+        return ResponseEntity.created(URI.create("/api/v1/users/" + response.user().id())).body(response);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        var userOptional = repository.findByEmail(request.email());
-
-        if (userOptional.isEmpty() || !passwordEncoder.matches(request.password(), userOptional.get().getPasswordHash())) {
-                throw new BusinessException("INVALID_CREDENTIALS", "Credenciais inválidas.");
-        }
-
-        User user = userOptional.get();
-        UserResponse userResponse = new UserResponse(
-                user.getId(), user.getName(), user.getEmail(),
-                user.getProfileImageUrl(), user.getCreatedAt(), duos.findActiveDuoId(user.getId()).orElse(null));
-
-        String token = tokenService.generateToken(user.getEmail());
-        RegisterResponse response = new RegisterResponse(userResponse, token, 7200L);
-
+    public ResponseEntity<RegisterResponse> login(@Valid @RequestBody LoginRequest request) {
+        RegisterResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }
-}
+}
