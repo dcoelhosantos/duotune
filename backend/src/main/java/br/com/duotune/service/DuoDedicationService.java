@@ -111,7 +111,7 @@ public class DuoDedicationService {
                 dedication.getArtist(),
                 dedication.getImageUrl(),
                 dedication.getMessage(),
-                dedication.getScheduledDate());
+                dedication.getScheduledDate(), dedication.isDelivered());
     }
 
     @Transactional
@@ -133,7 +133,7 @@ public class DuoDedicationService {
         return dedicationRepository.findBySenderIdOrderByScheduledDateDesc(sender.getId())
                 .stream()
                 .map(d -> new DedicationResponse(d.getId(), d.getTrackSpotifyId(), d.getTitle(), d.getArtist(),
-                        d.getImageUrl(), d.getMessage(), d.getScheduledDate()))
+                        d.getImageUrl(), d.getMessage(), d.getScheduledDate(), d.isDelivered()))
                 .toList();
     }
 
@@ -156,7 +156,7 @@ public class DuoDedicationService {
                 .stream()
                 .filter(d -> d.isDelivered() || d.getSender().getId().equals(currentPartnerId))
                 .map(d -> new DedicationResponse(d.getId(), d.getTrackSpotifyId(), d.getTitle(), d.getArtist(),
-                        d.getImageUrl(), d.getMessage(), d.getScheduledDate()))
+                        d.getImageUrl(), d.getMessage(), d.getScheduledDate(), d.isDelivered()))
                 .toList();
     }
 

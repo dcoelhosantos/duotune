@@ -1,3 +1,5 @@
+import DuoEmptyState from "../components/DuoEmptyState";
+import DuoPageHeading from "../components/DuoPageHeading";
 import { useEffect, useRef, useState } from "react";
 import { FaSpotify } from "react-icons/fa";
 import {
@@ -92,20 +94,16 @@ export default function MusicalMatch() {
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-400">
-            Seu espaço a dois
-          </p>
-          <h1 className="text-3xl font-bold tracking-tight">Match Musical</h1>
-          <p className="mt-2 text-sm text-gray-400">
-            Descubram o que conecta a trilha sonora de vocês.
-          </p>
-        </div>
+        <DuoPageHeading
+          eyebrow="Em sintonia"
+          title="Match Musical"
+          description="Descubram o que conecta a trilha sonora de vocês."
+        />
         {!unpaired && (
           <button
             onClick={calculate}
             disabled={loading || busy}
-            className="inline-flex items-center gap-2 rounded-xl bg-fuchsia-600 px-5 py-3 text-sm font-semibold hover:bg-fuchsia-500 disabled:cursor-wait disabled:opacity-50"
+            className="inline-flex cursor-pointer transition-colors items-center gap-2 rounded-xl bg-fuchsia-600 px-5 py-3 text-sm font-semibold hover:bg-fuchsia-500 disabled:cursor-wait disabled:opacity-50"
           >
             <FiRefreshCw className={busy ? "motion-safe:animate-spin" : ""} />
             {busy
@@ -134,22 +132,11 @@ export default function MusicalMatch() {
         </div>
       )}
       {unpaired ? (
-        <section className="rounded-3xl border border-gray-800 bg-gray-950 px-6 py-14 text-center">
-          <FiUsers size={36} className="mx-auto mb-5 text-fuchsia-400" />
-          <h2 className="text-2xl font-bold">Uma descoberta feita para dois</h2>
-          <p className="mx-auto mt-3 max-w-md text-gray-400">
-            Forme seu Duo para comparar os gostos musicais de vocês.
-          </p>
-          <Link
-            to="/convidar"
-            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-fuchsia-600 px-5 py-3 font-semibold hover:bg-fuchsia-500"
-          >
-            Convidar alguém <FiArrowRight />
-          </Link>
-          <Link to="/aceitar" className="mt-4 block text-sm text-fuchsia-300">
-            Já tenho um convite
-          </Link>
-        </section>
+        <DuoEmptyState
+          icon={<FiUsers size={36} />}
+          title="Uma descoberta feita para dois"
+          description="Forme seu Duo para comparar os gostos musicais de vocês."
+        />
       ) : (
         !loading && (
           <>
@@ -268,7 +255,7 @@ export default function MusicalMatch() {
                   href="https://open.spotify.com"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 text-xs text-gray-400 hover:text-white"
+                  className="inline-flex cursor-pointer transition-colors items-center gap-2 text-xs text-gray-400 hover:text-white"
                 >
                   <FaSpotify size={18} /> Dados musicais do Spotify
                 </a>

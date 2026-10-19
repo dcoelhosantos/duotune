@@ -1,7 +1,8 @@
+import DuoEmptyState from "../components/DuoEmptyState";
+import DuoPageHeading from "../components/DuoPageHeading";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  FiArrowRight,
   FiCheck,
   FiHeadphones,
   FiLock,
@@ -10,7 +11,6 @@ import {
   FiMusic,
   FiRefreshCw,
   FiSend,
-  FiUsers,
   FiWifi,
 } from "react-icons/fi";
 import RoomQueue from "../room/RoomQueue";
@@ -44,6 +44,16 @@ function Avatar({ member, online }) {
         className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-gray-950 ${online ? "bg-emerald-400" : "bg-gray-600"}`}
       />
     </div>
+  );
+}
+
+function MusicRoomHeading() {
+  return (
+    <DuoPageHeading
+      eyebrow="Seu espaço a dois"
+      title="Sala Musical"
+      description="A conversa de vocês também faz parte da trilha sonora."
+    />
   );
 }
 
@@ -108,42 +118,20 @@ export default function MusicRoom() {
 
   if (status === "unpaired")
     return (
-      <div className="mx-auto max-w-xl rounded-3xl border border-gray-800 bg-gray-950 px-6 py-14 text-center">
-        <FiUsers className="mx-auto mb-5 text-fuchsia-400" size={36} />
-        <h1 className="mb-3 text-2xl font-bold">Uma sala feita para dois</h1>
-        <p className="mb-8 leading-relaxed text-gray-400">
-          Forme seu Duo para ter um espaço para conversar e compartilhar música
-          com alguém especial.
-        </p>
-        <Link
-          to="/convidar"
-          className="inline-flex items-center gap-2 rounded-xl bg-fuchsia-600 px-5 py-3 font-semibold hover:bg-fuchsia-500"
-        >
-          Convidar alguém <FiArrowRight />
-        </Link>
-        <Link
-          to="/aceitar"
-          className="mt-5 block text-sm text-fuchsia-300 hover:text-white"
-        >
-          Já recebeu um convite? Aceitar convite
-        </Link>
+      <div className="mx-auto max-w-5xl space-y-6 pb-10">
+        <MusicRoomHeading />
+        <DuoEmptyState
+          icon={<FiHeadphones size={36} />}
+          title="Uma sala feita para dois"
+          description="Forme seu Duo para ter um espaço para conversar e compartilhar música com alguém especial."
+        />
       </div>
     );
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-400">
-            Seu espaço a dois
-          </p>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Sala Musical
-          </h1>
-          <p className="mt-2 text-sm text-gray-400">
-            A conversa de vocês também faz parte da trilha sonora.
-          </p>
-        </div>
+        <MusicRoomHeading />
         <div className="flex flex-wrap items-center gap-3">
           <span
             role="status"
@@ -157,7 +145,7 @@ export default function MusicRoom() {
           {joined ? (
             <button
               onClick={leave}
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-700 px-4 py-2.5 text-sm text-gray-300 hover:border-gray-500 hover:text-white"
+              className="inline-flex cursor-pointer transition-colors items-center gap-2 rounded-xl border border-gray-700 px-4 py-2.5 text-sm text-gray-300 hover:border-gray-500 hover:text-white"
             >
               <FiLogOut /> Sair da sala
             </button>
@@ -165,7 +153,7 @@ export default function MusicRoom() {
             <button
               onClick={join}
               disabled={connecting}
-              className="inline-flex items-center gap-2 rounded-xl bg-fuchsia-600 px-4 py-2.5 text-sm font-semibold hover:bg-fuchsia-500 disabled:cursor-wait disabled:opacity-50"
+              className="inline-flex cursor-pointer transition-colors items-center gap-2 rounded-xl bg-fuchsia-600 px-4 py-2.5 text-sm font-semibold hover:bg-fuchsia-500 disabled:cursor-wait disabled:opacity-50"
             >
               {status === "error" ? <FiRefreshCw /> : <FiHeadphones />}
               {connecting
@@ -274,7 +262,7 @@ export default function MusicRoom() {
             {!active && !connecting && (
               <button
                 onClick={join}
-                className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-purple-950 transition hover:bg-purple-100"
+                className="mt-6 inline-flex cursor-pointer items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-purple-950 transition hover:bg-purple-100"
               >
                 <FiHeadphones /> Vamos nos conectar
               </button>

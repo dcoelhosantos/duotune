@@ -1,3 +1,5 @@
+import DuoRequired from "../components/DuoRequired";
+import DuoPageHeading from "../components/DuoPageHeading";
 import { useEffect, useState } from "react";
 import {
   FiGift,
@@ -12,7 +14,39 @@ import { duoApi } from "../duo/api";
 import { useSpotify } from "../spotify/SpotifyContext";
 import { useNavigate, Link } from "react-router-dom";
 
+function todayInBrazil() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 export default function Dedications() {
+  return (
+    <DuoRequired
+      heading={<DedicationsHeading />}
+      icon={<FiGift size={36} />}
+      title="Uma música pode dizer muito"
+      description="Forme seu Duo para surpreender quem você gosta com músicas e mensagens programadas para dias especiais."
+    >
+      <DedicationsContent />
+    </DuoRequired>
+  );
+}
+
+function DedicationsHeading() {
+  return (
+    <DuoPageHeading
+      eyebrow="Carinho em forma de música"
+      title="Dedicatórias"
+      description="Surpreendam um ao outro com músicas e mensagens para dias especiais."
+    />
+  );
+}
+
+function DedicationsContent() {
   const [activeTab, setActiveTab] = useState("received");
   const [dedications, setDedications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,10 +98,14 @@ export default function Dedications() {
       return;
     }
 
-    playTrack({ id: dedication.trackSpotifyId }, null, true);
+    const started = await playTrack({ id: dedication.trackSpotifyId }, null, true);
+    if (!started) return;
 
     try {
       await duoApi(`/dedications/${dedication.id}/deliver`, { method: "POST" });
+      setDedications((items) => items.map((item) =>
+        item.id === dedication.id ? { ...item, delivered: true } : item,
+      ));
     } catch (e) {
       console.error("Falha ao confirmar entrega", e);
     }
@@ -105,7 +143,7 @@ export default function Dedications() {
       dateToCompare = `${dateString.year}-${String(dateString.monthValue || dateString.month || 1).padStart(2, "0")}-${String(dateString.dayOfMonth || dateString.day || 1).padStart(2, "0")}`;
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayInBrazil();
     return dateToCompare < today;
   };
 
@@ -118,19 +156,17 @@ export default function Dedications() {
       dateStr = `${dateValue.year}-${String(dateValue.monthValue || dateValue.month || 1).padStart(2, "0")}-${String(dateValue.dayOfMonth || dateValue.day || 1).padStart(2, "0")}`;
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayInBrazil();
     return dateStr <= today;
   };
 
   return (
-    <div className="p-8 text-white w-full max-w-4xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold flex items-center gap-3">
-          <FiGift className="text-fuchsia-500" /> Dedicatórias do Duo
-        </h1>
+    <div className="mx-auto max-w-5xl space-y-6 pb-10 text-white">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <DedicationsHeading />
         <Link
           to="/buscar"
-          className="flex items-center gap-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-white px-5 py-2.5 rounded-xl font-bold transition-all hover:scale-105 shadow-md"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-fuchsia-600 px-5 py-3 text-sm font-semibold transition-colors hover:bg-fuchsia-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-400"
         >
           <FiSearch size={18} /> Nova Dedicatória Surpresa
         </Link>
@@ -195,6 +231,7 @@ export default function Dedications() {
                   )}
                 </span>
                 {activeTab === "received" &&
+                  !dedication.delivered &&
                   isPastDate(
                     dedication.scheduleDate || dedication.scheduledDate,
                   ) && (
@@ -204,7 +241,7 @@ export default function Dedications() {
                       {formatDate(
                         dedication.scheduleDate || dedication.scheduledDate,
                       )}
-                      , mas você não logou a tempo!
+                      . Ela ainda está esperando por você!
                     </p>
                   )}
               </div>

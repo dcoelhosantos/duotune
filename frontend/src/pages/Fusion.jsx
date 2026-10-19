@@ -1,12 +1,35 @@
+import DuoRequired from "../components/DuoRequired";
+import DuoPageHeading from "../components/DuoPageHeading";
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiPlus, FiMusic, FiLayers } from "react-icons/fi";
+import { FiPlus, FiMusic, FiShuffle } from "react-icons/fi";
 import { playlistApi } from "../playlists/api";
 
 export default function Fusion() {
+  return (
+    <DuoRequired
+      heading={<FusionHeading />}
+      icon={<FiShuffle size={36} />}
+      title="Duas playlists, uma nova trilha sonora"
+      description="Forme seu Duo para misturar as músicas de vocês e criar uma playlist com a identidade dos dois."
+    >
+      <FusionContent />
+    </DuoRequired>
+  );
+}
+
+function FusionHeading() {
+  return (
+    <DuoPageHeading
+      eyebrow="Misturem suas músicas"
+      title="Playlist Fusion"
+      description="Escolham uma playlist de cada um e criem uma trilha sonora juntos."
+    />
+  );
+}
+
+function FusionContent() {
   const navigate = useNavigate();
-  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const hasDuo = !!storedUser.duoId;
 
   const bottomRef = useRef(null);
 
@@ -25,7 +48,7 @@ export default function Fusion() {
 
     Promise.all([
       playlistApi(""),
-      hasDuo ? playlistApi("/duo/list").catch(() => []) : Promise.resolve([]),
+      playlistApi("/duo/list"),
     ])
       .then(([myData, duoData]) => {
         if (active) {
@@ -43,7 +66,7 @@ export default function Fusion() {
     return () => {
       active = false;
     };
-  }, [hasDuo]);
+  }, []);
 
   const handleSelectMyPlaylist = (pl) => {
     setSelectedMyPlaylist(pl);
@@ -145,34 +168,9 @@ export default function Fusion() {
     );
   }
 
-  if (!hasDuo) {
-    return (
-      <div className="max-w-4xl mx-auto p-8 text-center bg-gray-900/50 rounded-2xl border border-gray-800 mt-10">
-        <FiLayers size={48} className="mx-auto text-fuchsia-500 mb-4" />
-        <h2 className="text-2xl font-bold text-white mb-2">
-          Recurso Exclusivo para Duos
-        </h2>
-        <p className="text-gray-400">
-          Você precisa formar um Duo para desbloquear a Playlist Fusion.
-        </p>
-        <button
-          onClick={() => navigate("/convidar")}
-          className="mt-6 px-6 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-full font-bold transition-colors"
-        >
-          Convidar uma dupla
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-4xl mx-auto pb-20 pt-4 relative">
-      <div className="mb-10">
-        <h1 className="text-4xl font-bold text-white mb-2">Playlist Fusion</h1>
-        <p className="text-gray-400">
-          Escolha uma playlist sua e uma do seu Duo para mesclá-las magicamente.
-        </p>
-      </div>
+    <div className="mx-auto max-w-5xl space-y-6 pb-10 text-white">
+      <FusionHeading />
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-lg mb-8">

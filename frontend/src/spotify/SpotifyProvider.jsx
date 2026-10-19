@@ -284,10 +284,10 @@ export default function SpotifyProvider({ children }) {
         () => setRoomNotice(false),
         10000,
       );
-      return;
+      return false;
     }
     setPlayerVisible(true);
-    if (!deviceId || commandRef.current) return;
+    if (!deviceId || commandRef.current) return false;
     commandRef.current = true;
     setBusy(true);
     setError("");
@@ -342,6 +342,7 @@ export default function SpotifyProvider({ children }) {
         );
       }
       if (!sameTrack) setActivePlaylistId(playlist?.id ?? null);
+      return true;
     } catch (err) {
       if (/^session closed\.?$/i.test(err?.message?.trim() || "")) {
         setDeviceId(null);
@@ -349,6 +350,7 @@ export default function SpotifyProvider({ children }) {
       }
       setError(spotifyErrorMessage(err));
       setNeedsAuthorization(err.status === 409);
+      return false;
     } finally {
       commandRef.current = false;
       setBusy(false);
