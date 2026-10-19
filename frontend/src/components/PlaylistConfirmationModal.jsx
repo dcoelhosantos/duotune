@@ -1,7 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 
 export default function PlaylistConfirmationModal({ title, children, confirmLabel, pendingLabel, pending, error, onClose, onConfirm }) {
   const dialogRef = useRef(null);
+  const titleId = useId();
+  const descriptionId = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -12,18 +14,18 @@ export default function PlaylistConfirmationModal({ title, children, confirmLabe
   return (
     <dialog
       ref={dialogRef}
-      aria-labelledby="delete-playlist-title"
-      aria-describedby="delete-playlist-description"
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
       onCancel={(event) => {
         event.preventDefault();
         if (!pending) onClose();
       }}
       className="m-auto max-h-[90vh] w-[calc(100%-2rem)] max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-6 text-white shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm"
     >
-      <h2 id="delete-playlist-title" className="mb-4 text-2xl font-bold">
+      <h2 id={titleId} className="mb-4 text-2xl font-bold">
         {title}
       </h2>
-      <p id="delete-playlist-description" className="mb-6 text-sm leading-relaxed text-gray-300">
+      <p id={descriptionId} className="mb-6 text-sm leading-relaxed text-gray-300">
         {children}
       </p>
       {error && (

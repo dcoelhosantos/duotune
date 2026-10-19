@@ -217,10 +217,10 @@ export default function MusicRoom() {
 
           <section className="relative overflow-hidden rounded-3xl border border-fuchsia-500/15 bg-gradient-to-br from-purple-950 via-gray-950 to-gray-950 px-6 pb-8 pt-6 text-center">
             <div className="flex items-center justify-between text-xs text-purple-200/70">
-              <span className="inline-flex cursor-pointer transition-colors items-center gap-2">
+              <span className="inline-flex items-center gap-2">
                 <FiHeadphones /> O som de vocês
               </span>
-              <span className="inline-flex cursor-pointer transition-colors items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5">
                 <FiLock /> Sala privada
               </span>
             </div>
