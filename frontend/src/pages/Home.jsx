@@ -267,12 +267,14 @@ export default function Home() {
         {loading ? (
           <p className="text-gray-400">Carregando espaço compartilhado...</p>
         ) : !hasDuo ? (
-          <div className="text-gray-500 text-sm bg-gray-900/50 p-6 rounded-xl border border-gray-800 border-dashed">
-            Você ainda não formou um Duo. Convide sua dupla para visualizar as
-            playlists aqui!
+          <div className="flex flex-col items-start gap-4 text-gray-500 text-sm bg-gray-900/50 p-6 rounded-xl border border-gray-800 border-dashed">
+            <p>
+              Você ainda não formou um Duo. Convide sua dupla para visualizar as
+              playlists aqui!
+            </p>
             <Link
               to="/convidar"
-              className="mt-4 inline-flex items-center gap-2 text-fuchsia-300 hover:text-fuchsia-200"
+              className="inline-flex items-center gap-2 text-fuchsia-300 hover:text-fuchsia-200"
             >
               <FiUserPlus /> Convidar minha dupla
             </Link>

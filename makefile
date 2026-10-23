@@ -52,4 +52,10 @@ run-front:
 
 # --- COMANDOS GERAIS ---
 start-back: infra setup-back run-back
-start-front: setup-front run-front
+start-front:
+	@if curl -fsS --max-time 2 http://127.0.0.1:5173/ >/dev/null; then \
+		echo "Frontend já está rodando em http://127.0.0.1:5173"; \
+	else \
+		if [ ! -x frontend/node_modules/.bin/vite ]; then $(MAKE) setup-front || exit $$?; fi; \
+		$(MAKE) run-front; \
+	fi
