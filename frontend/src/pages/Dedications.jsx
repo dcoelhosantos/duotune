@@ -9,6 +9,7 @@ import {
   FiMusic,
   FiAlertCircle,
   FiSearch,
+  FiX,
 } from "react-icons/fi";
 import { duoApi } from "../duo/api";
 import { useSpotify } from "../spotify/SpotifyContext";
@@ -50,6 +51,9 @@ function DedicationsContent() {
   const [activeTab, setActiveTab] = useState("received");
   const [dedications, setDedications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dedicationToDelete, setDedicationToDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleteError, setDeleteError] = useState("");
 
   const navigate = useNavigate();
   const { playTrack, connected } = useSpotify();
@@ -81,16 +85,36 @@ function DedicationsContent() {
     };
   }, [activeTab]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Tem certeza que deseja cancelar esta surpresa?"))
-      return;
+  const handleDelete = async () => {
+    if (!dedicationToDelete) return;
+
+    const id = dedicationToDelete.id;
+    setDeletingId(id);
+    setDeleteError("");
     try {
       await duoApi(`/dedications/${id}`, { method: "DELETE" });
-      setDedications(dedications.filter((d) => d.id !== id));
+      setDedications((items) => items.filter((dedication) => dedication.id !== id));
+      setDedicationToDelete(null);
     } catch (err) {
-      alert(err.message || "Erro ao excluir dedicatória.");
+      setDeleteError(err.message || "Não foi possível cancelar a dedicatória. Tente novamente.");
+    } finally {
+      setDeletingId(null);
     }
   };
+
+  useEffect(() => {
+    if (!dedicationToDelete) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && deletingId !== dedicationToDelete.id) {
+        setDedicationToDelete(null);
+        setDeleteError("");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [dedicationToDelete, deletingId]);
 
   const handlePlay = async (dedication) => {
     if (!isConnected) {
@@ -145,19 +169,6 @@ function DedicationsContent() {
 
     const today = todayInBrazil();
     return dateToCompare < today;
-  };
-
-  const isPastOrToday = (dateValue) => {
-    if (!dateValue) return false;
-    let dateStr = dateValue;
-    if (Array.isArray(dateValue)) {
-      dateStr = `${dateValue[0]}-${String(dateValue[1]).padStart(2, "0")}-${String(dateValue[2]).padStart(2, "0")}`;
-    } else if (typeof dateValue === "object") {
-      dateStr = `${dateValue.year}-${String(dateValue.monthValue || dateValue.month || 1).padStart(2, "0")}-${String(dateValue.dayOfMonth || dateValue.day || 1).padStart(2, "0")}`;
-    }
-
-    const today = todayInBrazil();
-    return dateStr <= today;
   };
 
   return (
@@ -296,13 +307,14 @@ function DedicationsContent() {
                   </button>
                 ) : (
                   <button
-                    onClick={() => handleDelete(dedication.id)}
+                    onClick={() => {
+                      setDeleteError("");
+                      setDedicationToDelete(dedication);
+                    }}
                     className="flex items-center gap-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 px-3 py-2 rounded-lg transition-colors cursor-pointer"
                   >
                     <FiTrash2 />
-                    {isPastOrToday(
-                      dedication.scheduleDate || dedication.scheduledDate,
-                    )
+                    {dedication.delivered
                       ? "Excluir Dedicatória"
                       : "Cancelar Envio"}
                   </button>
@@ -310,6 +322,115 @@ function DedicationsContent() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {dedicationToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              deletingId !== dedicationToDelete.id
+            ) {
+              setDedicationToDelete(null);
+              setDeleteError("");
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-dedication-title"
+            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 p-6 shadow-2xl shadow-black/50"
+          >
+            <button
+              type="button"
+              aria-label="Fechar confirmação"
+              disabled={deletingId === dedicationToDelete.id}
+              onClick={() => {
+                setDedicationToDelete(null);
+                setDeleteError("");
+              }}
+              className="absolute right-4 top-4 rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <FiX size={18} />
+            </button>
+
+            <h2
+              id="cancel-dedication-title"
+              className="mb-2 pr-8 text-xl font-bold text-white"
+            >
+              {dedicationToDelete.delivered
+                ? "Excluir dedicatória?"
+                : "Cancelar esta surpresa?"}
+            </h2>
+            <p className="mb-5 text-sm leading-relaxed text-gray-400">
+              {dedicationToDelete.delivered
+                ? "Esta dedicatória já foi ouvida. Ela será removida e não poderá ser recuperada."
+                : "O envio desta surpresa será cancelado e ela não poderá ser recuperada."}
+            </p>
+
+            <div className="mb-5 flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-950/70 p-3">
+              {dedicationToDelete.imageUrl ? (
+                <img
+                  src={dedicationToDelete.imageUrl}
+                  alt=""
+                  className="h-12 w-12 rounded-lg object-cover"
+                />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-800 text-fuchsia-400">
+                  <FiMusic size={20} />
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-white">
+                  {dedicationToDelete.title}
+                </p>
+                <p className="truncate text-sm text-gray-400">
+                  {dedicationToDelete.artist}
+                </p>
+                <p className="mt-1 text-xs text-fuchsia-300">
+                  Envio para {formatDate(dedicationToDelete.scheduleDate || dedicationToDelete.scheduledDate)}
+                </p>
+              </div>
+            </div>
+
+            {deleteError && (
+              <p className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                {deleteError}
+              </p>
+            )}
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={deletingId === dedicationToDelete.id}
+                onClick={() => {
+                  setDedicationToDelete(null);
+                  setDeleteError("");
+                }}
+                className="rounded-xl border border-gray-700 px-4 py-3 text-sm font-semibold text-gray-200 transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-32"
+              >
+                Manter dedicatória
+              </button>
+              <button
+                type="button"
+                disabled={deletingId === dedicationToDelete.id}
+                onClick={handleDelete}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500/90 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-500 disabled:cursor-wait disabled:opacity-60 sm:min-w-32"
+              >
+                <FiTrash2 size={16} />
+                {deletingId === dedicationToDelete.id
+                  ? dedicationToDelete.delivered
+                    ? "Excluindo..."
+                    : "Cancelando..."
+                  : dedicationToDelete.delivered
+                    ? "Excluir dedicatória"
+                    : "Cancelar envio"}
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </div>

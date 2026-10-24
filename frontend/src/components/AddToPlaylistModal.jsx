@@ -53,10 +53,6 @@ export default function AddToPlaylistModal({ track, onClose }) {
 
       setPlaylistsWithTrack((prev) => [...prev, playlistId]);
       setFeedback({ type: "success", msg: "Música adicionada com sucesso!" });
-
-      setTimeout(() => {
-        if (isMounted.current) onClose();
-      }, 1500);
     } catch (err) {
       if (!isMounted.current) return;
       setFeedback({ type: "error", msg: err.message });
@@ -97,7 +93,9 @@ export default function AddToPlaylistModal({ track, onClose }) {
                     : "text-gray-300"
               }`}
             >
-              {feedback.type === "success" && <FiCheck size={18} />}
+              {feedback.type === "success" && (
+                <FiCheck size={18} aria-hidden="true" />
+              )}
               {feedback.msg}
             </div>
           )}
@@ -133,8 +131,7 @@ export default function AddToPlaylistModal({ track, onClose }) {
                     onClick={() => handleAddToPlaylist(pl.id)}
                     disabled={
                       isAlreadyAdded ||
-                      feedback.type === "loading" ||
-                      feedback.type === "success"
+                      feedback.type === "loading"
                     }
                     className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${
                       isAlreadyAdded
