@@ -45,8 +45,8 @@ public class DuoDedicationService {
 
         // Garante que o fuso horário seja respeitado na validação
         LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
-        if (request.scheduledDate().isBefore(today)) {
-            throw new ApplicationException(ErrorType.INVALID_INPUT, "A data da surpresa não pode ser no passado.");
+        if (!request.scheduledDate().isAfter(today)) {
+            throw new ApplicationException(ErrorType.INVALID_INPUT, "A data da surpresa deve ser no futuro.");
         }
 
         // Trava de leitura preventiva

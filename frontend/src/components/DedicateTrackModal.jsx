@@ -142,7 +142,7 @@ function DedicationDatePicker({ value, minDate, onChange }) {
             })}
           </div>
           <p className="mt-3 border-t border-gray-800 pt-3 text-xs text-gray-500">
-            Você pode escolher hoje ou qualquer data futura.
+            Você pode escolher amanhã ou qualquer data futura.
           </p>
         </div>
       )}
@@ -157,10 +157,11 @@ export default function DedicateTrackModal({ track, onClose }) {
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // Permite programar a surpresa para hoje, sem aceitar datas passadas.
-  const today = new Date();
-  const offsetMs = today.getTimezoneOffset() * 60000;
-  const minDate = new Date(today.getTime() - offsetMs)
+  // A surpresa pode ser programada a partir de amanhã.
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const offsetMs = tomorrow.getTimezoneOffset() * 60000;
+  const minDate = new Date(tomorrow.getTime() - offsetMs)
     .toISOString()
     .split("T")[0];
 
