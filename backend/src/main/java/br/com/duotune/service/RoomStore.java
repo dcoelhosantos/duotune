@@ -2,6 +2,7 @@ package br.com.duotune.service;
 
 import br.com.duotune.dto.RoomDtos.ChatMessage;
 import br.com.duotune.dto.RoomDtos.QueueEntry;
+import br.com.duotune.framework.model.ParticipantGroup;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,6 +15,7 @@ public class RoomStore {
     record ReadyLease(String clientId, long expiresAt) {}
     record Connection(Long userId, Set<String> subscriptions) {}
     static class Room {
+        volatile ParticipantGroup participantGroup;
         long version;
         long playbackRevision;
         boolean playing;
@@ -29,7 +31,11 @@ public class RoomStore {
     private final Map<Long, Room> rooms = new ConcurrentHashMap<>();
     private final Map<String, Long> sessionRooms = new ConcurrentHashMap<>();
 
-    Room getOrCreate(Long id) { return rooms.computeIfAbsent(id, key -> new Room()); }
+    Room getOrCreate(ParticipantGroup group) {
+        Room room = rooms.computeIfAbsent(group.id(), key -> new Room());
+        room.participantGroup = group;
+        return room;
+    }
     Room get(Long id) { return rooms.get(id); }
     Long roomIdForSession(String session) { return sessionRooms.get(session); }
     void bindSession(String session, Long id) { sessionRooms.put(session, id); }

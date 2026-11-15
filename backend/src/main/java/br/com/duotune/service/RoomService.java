@@ -1,12 +1,14 @@
 package br.com.duotune.service;
 
 import br.com.duotune.port.room.RoomSessionAccess;
+import br.com.duotune.framework.model.ParticipantGroup;
+import br.com.duotune.framework.policy.MusicRoomPolicy;
+import br.com.duotune.framework.policy.ParticipantLinkPolicy;
 import br.com.duotune.dto.RoomDtos.*;
 import br.com.duotune.service.RoomStore.*;
 import br.com.duotune.integration.room.RoomPublisher;
 import br.com.duotune.port.music.TrackCatalog;
 import br.com.duotune.model.User;
-import br.com.duotune.repository.DuoRepository;
 import br.com.duotune.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,18 +24,21 @@ public class RoomService {
     private final TrackCatalog catalog;
     private final RoomPlaylistService playlists;
     private final UserRepository users;
-    private final DuoRepository duos;
+    private final ParticipantLinkPolicy participantLinks;
+    private final MusicRoomPolicy roomPolicy;
     private final RoomPublisher publisher;
     private final RoomSessionAccess access;
     private final RoomStore rooms;
 
-    public RoomService(UserRepository users, DuoRepository duos, RoomPublisher publisher,
-            RoomSessionAccess access, TrackCatalog catalog, RoomPlaylistService playlists, RoomStore rooms) {
+    public RoomService(UserRepository users, ParticipantLinkPolicy participantLinks, MusicRoomPolicy roomPolicy,
+            RoomPublisher publisher, RoomSessionAccess access, TrackCatalog catalog,
+            RoomPlaylistService playlists, RoomStore rooms) {
         this.rooms = rooms;
         this.playlists = playlists;
         this.catalog = catalog;
         this.users = users;
-        this.duos = duos;
+        this.participantLinks = participantLinks;
+        this.roomPolicy = roomPolicy;
         this.publisher = publisher;
         this.access = access;
     }
@@ -41,33 +46,50 @@ public class RoomService {
     private User user(String email) {
         return users.findByEmail(email).orElseThrow(() -> new ApplicationException(ErrorType.UNAUTHENTICATED, "Entre novamente para acessar a sala."));
     }
-    private Long duoId(User user) {
-        return duos.findActiveDuoId(user.getId()).orElseThrow(() -> new ApplicationException(ErrorType.CONFLICT, "Forme um Duo para entrar na sala musical."));
+    private ParticipantGroup group(User user) {
+        return participantLinks.findActiveGroupFor(user.getId())
+                .orElseThrow(() -> new ApplicationException(ErrorType.CONFLICT, participantLinks.noActiveGroupMessage()));
     }
-    private Member member(User user) { return new Member(user.getId(), user.getName(), user.getProfileImageUrl()); }
+
+    private boolean playbackReady(Room room) {
+        ParticipantGroup group = room.participantGroup;
+        if (group == null) return false;
+        Set<Long> readyAccountIds = ready(room).stream().map(ReadyUser::userId).collect(java.util.stream.Collectors.toSet());
+        return roomPolicy.canStartPlayback(group, readyAccountIds);
+    }
+
+    private void requireQueueControl(ParticipantGroup group, Long accountId) {
+        if (!roomPolicy.canManageQueue(group, accountId)) {
+            throw new ApplicationException(ErrorType.FORBIDDEN, roomPolicy.queuePermissionDeniedMessage());
+        }
+    }
 
     @Transactional(readOnly = true)
     public RoomInfo current(String email) {
         User user = user(email);
-        Long id = duoId(user);
-        var duo = duos.findById(id).orElseThrow(() -> new ApplicationException(ErrorType.NOT_FOUND, "Duo não encontrado."));
-        Room room = rooms.getOrCreate(id);
+        ParticipantGroup group = group(user);
+        Long id = group.id();
+        Room room = rooms.getOrCreate(group);
         synchronized (room) {
-            return new RoomInfo(id, user.getId(), List.of(member(duo.getUser1()), member(duo.getUser2())), state(id, room));
+            List<Member> members = group.participants().stream()
+                    .map(participant -> new Member(participant.accountId(), participant.name(), participant.profileImageUrl()))
+                    .toList();
+            return new RoomInfo(id, user.getId(), members, state(id, room));
         }
     }
 
     @Transactional(readOnly = true)
     public State chat(String email, ChatRequest request) {
         User user = user(email);
-        Long id = duoId(user);
+        ParticipantGroup group = group(user);
+        Long id = group.id();
         String text = request.text() == null ? "" : request.text().strip();
         if (text.isEmpty() || text.length() > 800) {
             throw new ApplicationException(ErrorType.INVALID_INPUT, "Escreva uma mensagem de até 800 caracteres.");
         }
         try { UUID.fromString(request.clientId()); }
         catch (Exception error) { throw new ApplicationException(ErrorType.INVALID_INPUT, "Identificador da mensagem inválido. Tente novamente."); }
-        Room room = rooms.getOrCreate(id);
+        Room room = rooms.getOrCreate(group);
         synchronized (room) {
             if (!online(room).contains(user.getId())) {
                 throw new ApplicationException(ErrorType.CONFLICT, "Conecte-se à sala antes de enviar uma mensagem.");
@@ -133,12 +155,14 @@ public class RoomService {
 
     public State addTrack(String email, AddTrackRequest request) {
         User user = user(email);
-        Long id = duoId(user);
-        Room room = rooms.getOrCreate(id);
-        synchronized (room) { requireOnline(room, user.getId()); }
+        ParticipantGroup group = group(user);
+        Long id = group.id();
+        Room room = rooms.getOrCreate(group);
+        synchronized (room) { requireOnline(room, user.getId()); requireQueueControl(group, user.getId()); }
         var track = catalog.track(email, request.trackId());
         synchronized (room) {
             requireOnline(room, user.getId());
+            requireQueueControl(group, user.getId());
             if (room.queue.size() >= 99) throw new ApplicationException(ErrorType.CONFLICT, "A fila comporta até 99 músicas.");
             room.queue.add(new QueueEntry(UUID.randomUUID().toString(), track, user.getId()));
             if (room.queue.size() == 1) playbackChanged(room, 0, false);
@@ -148,9 +172,10 @@ public class RoomService {
 
     public State addPlaylist(String email, Long playlistId, AddPlaylistRequest request) {
         User user = user(email);
-        Long id = duoId(user);
-        Room room = rooms.getOrCreate(id);
-        synchronized (room) { requireOnline(room, user.getId()); }
+        ParticipantGroup group = group(user);
+        Long id = group.id();
+        Room room = rooms.getOrCreate(group);
+        synchronized (room) { requireOnline(room, user.getId()); requireQueueControl(group, user.getId()); }
 
         var tracks = playlists.select(playlistId, email, request == null ? null : request.trackIds());
         int count = tracks.size();
@@ -162,9 +187,12 @@ public class RoomService {
             var track = playlists.resolve(playlistId, item, email);
             entries.add(new QueueEntry(UUID.randomUUID().toString(), track, user.getId()));
         }
-        if (!id.equals(duoId(user))) throw new ApplicationException(ErrorType.CONFLICT, "Seu Duo mudou. Entre novamente na sala.");
+        ParticipantGroup currentGroup = group(user);
+        if (!id.equals(currentGroup.id())) throw new ApplicationException(ErrorType.CONFLICT, participantLinks.groupChangedMessage());
+        rooms.getOrCreate(currentGroup);
         synchronized (room) {
             requireOnline(room, user.getId());
+            requireQueueControl(currentGroup, user.getId());
             requirePlaylistCapacity(room, count);
             boolean empty = room.queue.isEmpty();
             room.queue.addAll(entries);
@@ -181,24 +209,27 @@ public class RoomService {
 
     public State removeTrack(String email, String entryId) {
         User user = user(email);
-        Long id = duoId(user);
-        Room room = rooms.getOrCreate(id);
+        ParticipantGroup group = group(user);
+        Long id = group.id();
+        Room room = rooms.getOrCreate(group);
         synchronized (room) {
             requireOnline(room, user.getId());
+            requireQueueControl(group, user.getId());
             boolean current = !room.queue.isEmpty() && room.queue.get(0).id().equals(entryId);
             boolean removed = room.queue.removeIf(entry -> entry.id().equals(entryId));
             if (!removed) return state(id, room);
-            if (current) playbackChanged(room, 0, room.playing && !room.queue.isEmpty() && ready(room).size() == 2);
+            if (current) playbackChanged(room, 0, room.playing && !room.queue.isEmpty() && playbackReady(room));
             return publish(id, room);
         }
     }
 
     public State readiness(String email, ReadyRequest request) {
         User user = user(email);
-        Long id = duoId(user);
+        ParticipantGroup group = group(user);
+        Long id = group.id();
         if (request.clientId() == null || !request.clientId().matches("[a-fA-F0-9-]{36}"))
             throw new ApplicationException(ErrorType.INVALID_INPUT, "Identificador do player inválido.");
-        Room room = rooms.getOrCreate(id);
+        Room room = rooms.getOrCreate(group);
         boolean verify;
         synchronized (room) {
             if (request.ready()) requireOnline(room, user.getId());
@@ -226,20 +257,22 @@ public class RoomService {
                 var lease = room.ready.get(user.getId());
                 if (lease != null && lease.clientId().equals(request.clientId())) room.ready.remove(user.getId());
             }
-            if (room.playing && ready(room).size() != 2) playbackChanged(room, position(room), false);
+            if (room.playing && !playbackReady(room)) playbackChanged(room, position(room), false);
             return publish(id, room);
         }
     }
 
     public State playback(String email, PlaybackRequest request) {
         User user = user(email);
-        Long id = duoId(user);
-        Room room = rooms.getOrCreate(id);
+        ParticipantGroup group = group(user);
+        Long id = group.id();
+        Room room = rooms.getOrCreate(group);
         synchronized (room) {
             requireOnline(room, user.getId());
+            requireQueueControl(group, user.getId());
             if (request.revision() != room.playbackRevision) throw new ApplicationException(ErrorType.CONFLICT, "O player mudou. Tente novamente.");
-            if (!"PAUSE".equals(request.action()) && ready(room).size() != 2)
-                throw new ApplicationException(ErrorType.CONFLICT, "Os dois precisam estar na sala com seus players Spotify Premium disponíveis.");
+            if (!"PAUSE".equals(request.action()) && !playbackReady(room))
+                throw new ApplicationException(ErrorType.CONFLICT, roomPolicy.playbackUnavailableMessage());
             if (room.queue.isEmpty()) throw new ApplicationException(ErrorType.CONFLICT, "Adicione uma música à fila.");
             switch (request.action() == null ? "" : request.action()) {
                 case "PLAY" -> playbackChanged(room, position(room), true);
@@ -264,7 +297,7 @@ public class RoomService {
         rooms.forEach((id, room) -> {
             synchronized (room) {
                 if (!room.playing) return;
-                if (ready(room).size() != 2) {
+                if (!playbackReady(room)) {
                     playbackChanged(room, position(room), false);
                     publish(id, room);
                 } else if (!room.queue.isEmpty() && position(room) >= room.queue.get(0).track().durationMs()) {
@@ -277,9 +310,10 @@ public class RoomService {
     }
     public void subscribe(String email, String destination, String sessionId, String subscriptionId) {
         User user = user(email);
-        Long id = duoId(user);
+        ParticipantGroup group = group(user);
+        Long id = group.id();
         if (!publisher.isRoomDestination(id, destination) || sessionId == null || subscriptionId == null) return;
-        Room room = rooms.getOrCreate(id);
+        Room room = rooms.getOrCreate(group);
         synchronized (room) {
             String session = sessionId;
             room.connections.computeIfAbsent(session, key -> new Connection(user.getId(), new HashSet<>()))
@@ -305,7 +339,7 @@ public class RoomService {
                 room.connections.remove(session);
                 rooms.unbindSession(session, id);
                 if (!online(room).contains(connection.userId())) room.ready.remove(connection.userId());
-                if (room.playing && ready(room).size() != 2) playbackChanged(room, position(room), false);
+                if (room.playing && !playbackReady(room)) playbackChanged(room, position(room), false);
             }
             room.version++;
             publisher.publish(id, state(id, room));
