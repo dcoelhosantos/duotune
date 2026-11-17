@@ -2,6 +2,8 @@ package br.com.duotune.service;
 
 import br.com.duotune.dto.DedicationRequest;
 import br.com.duotune.dto.DedicationResponse;
+import br.com.duotune.framework.model.ExperienceRecordType;
+import br.com.duotune.framework.policy.ExperienceRecordingPolicy;
 import br.com.duotune.model.Duo;
 import br.com.duotune.model.DuoDedication;
 import br.com.duotune.model.User;
@@ -25,16 +27,19 @@ public class DuoDedicationService {
     private final DuoDedicationRepository dedicationRepository;
     private final UserRepository userRepository;
     private final DuoRepository duoRepository;
+    private final ExperienceRecordingPolicy recordingPolicy;
 
     public DuoDedicationService(DuoDedicationRepository dedicationRepository, UserRepository userRepository,
-            DuoRepository duoRepository) {
+            DuoRepository duoRepository, ExperienceRecordingPolicy recordingPolicy) {
         this.dedicationRepository = dedicationRepository;
         this.userRepository = userRepository;
         this.duoRepository = duoRepository;
+        this.recordingPolicy = recordingPolicy;
     }
 
     @Transactional
     public void createDedication(String email, DedicationRequest request) {
+        requireSupportedRecord();
         User sender = userRepository.findByEmail(email).orElseThrow();
 
         Long activeDuoId = duoRepository.findActiveDuoId(sender.getId())
@@ -81,6 +86,7 @@ public class DuoDedicationService {
 
     @Transactional(readOnly = true)
     public DedicationResponse getPendingDedication(String email) {
+        requireSupportedRecord();
         User receiver = userRepository.findByEmail(email).orElseThrow();
 
         Optional<Long> activeDuoId = duoRepository.findActiveDuoId(receiver.getId());
@@ -116,6 +122,7 @@ public class DuoDedicationService {
 
     @Transactional
     public void confirmDelivery(String email, Long dedicationId) {
+        requireSupportedRecord();
         DuoDedication dedication = dedicationRepository.findById(dedicationId)
                 .orElseThrow(() -> new ApplicationException(ErrorType.NOT_FOUND, "Surpresa não encontrada."));
 
@@ -129,6 +136,7 @@ public class DuoDedicationService {
 
     @Transactional(readOnly = true)
     public List<DedicationResponse> getSentDedications(String email) {
+        requireSupportedRecord();
         User sender = userRepository.findByEmail(email).orElseThrow();
         return dedicationRepository.findBySenderIdOrderByScheduledDateDesc(sender.getId())
                 .stream()
@@ -139,6 +147,7 @@ public class DuoDedicationService {
 
     @Transactional(readOnly = true)
     public List<DedicationResponse> getReceivedDedications(String email) {
+        requireSupportedRecord();
         User receiver = userRepository.findByEmail(email).orElseThrow();
         LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
 
@@ -162,6 +171,7 @@ public class DuoDedicationService {
 
     @Transactional
     public void deleteDedication(String email, Long dedicationId) {
+        requireSupportedRecord();
         DuoDedication dedication = dedicationRepository.findById(dedicationId)
                 .orElseThrow(() -> new ApplicationException(ErrorType.NOT_FOUND, "Dedicatória não encontrada."));
 
@@ -172,5 +182,11 @@ public class DuoDedicationService {
         }
 
         dedicationRepository.delete(dedication);
+    }
+
+    private void requireSupportedRecord() {
+        if (!recordingPolicy.supports(ExperienceRecordType.TRACK_DEDICATION)) {
+            throw new ApplicationException(ErrorType.CONFLICT, "Dedicatórias não estão disponíveis nesta aplicação.");
+        }
     }
 }

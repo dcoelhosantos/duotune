@@ -1,6 +1,8 @@
 package br.com.duotune.service;
 
 import br.com.duotune.dto.MemoryPhotoResponse;
+import br.com.duotune.framework.model.ExperienceRecordType;
+import br.com.duotune.framework.policy.ExperienceRecordingPolicy;
 import br.com.duotune.model.Duo;
 import br.com.duotune.model.MemoryPhoto;
 import br.com.duotune.model.User;
@@ -25,17 +27,20 @@ public class MemoryPhotoService {
     private final UserRepository users;
     private final DuoRepository duos;
     private final ImageProcessingService images;
+    private final ExperienceRecordingPolicy recordingPolicy;
 
     public MemoryPhotoService(MemoryPhotoRepository memories, UserRepository users,
-            DuoRepository duos, ImageProcessingService images) {
+            DuoRepository duos, ImageProcessingService images, ExperienceRecordingPolicy recordingPolicy) {
         this.memories = memories;
         this.users = users;
         this.duos = duos;
         this.images = images;
+        this.recordingPolicy = recordingPolicy;
     }
 
     @Transactional(readOnly = true)
     public List<MemoryPhotoResponse> list(String email) {
+        requireSupportedRecord();
         Duo duo = activeDuo(email);
         return memories.findAllByDuoIdOrderByCreatedAtAsc(duo.getId()).stream()
                 .map(this::response)
@@ -45,6 +50,7 @@ public class MemoryPhotoService {
     @Transactional
     public MemoryPhotoResponse create(String email, MultipartFile image, String trackSpotifyId,
             String trackTitle, String trackArtist, String trackImageUrl) throws IOException {
+        requireSupportedRecord();
         User user = user(email);
         Duo duo = duos.findActiveDuoByUserId(user.getId())
                 .orElseThrow(() -> new ApplicationException(ErrorType.CONFLICT,
@@ -80,6 +86,7 @@ public class MemoryPhotoService {
 
     @Transactional
     public void delete(String email, Long id) {
+        requireSupportedRecord();
         Duo duo = activeDuo(email);
         MemoryPhoto memory = memories.findByIdAndDuoId(id, duo.getId())
                 .orElseThrow(() -> new ApplicationException(ErrorType.NOT_FOUND, "Memória não encontrada."));
@@ -91,6 +98,12 @@ public class MemoryPhotoService {
         return duos.findActiveDuoByUserId(user.getId())
                 .orElseThrow(() -> new ApplicationException(ErrorType.CONFLICT,
                         "Forme um Duo para acessar o álbum de memórias."));
+    }
+
+    private void requireSupportedRecord() {
+        if (!recordingPolicy.supports(ExperienceRecordType.MEMORY_ALBUM)) {
+            throw new ApplicationException(ErrorType.CONFLICT, "O álbum de memórias não está disponível nesta aplicação.");
+        }
     }
 
     private User user(String email) {

@@ -1,11 +1,10 @@
 package br.com.duotune.config;
 
-import br.com.duotune.port.room.RoomSessionAccess;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-import br.com.duotune.repository.DuoRepository;
-import br.com.duotune.repository.UserRepository;
-import br.com.duotune.service.TokenService;
-import com.auth0.jwt.JWT;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -19,26 +18,28 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import com.auth0.jwt.JWT;
+
+import br.com.duotune.framework.policy.ParticipantLinkPolicy;
+import br.com.duotune.port.room.RoomSessionAccess;
+import br.com.duotune.repository.UserRepository;
+import br.com.duotune.service.TokenService;
 
 @Component
 public class StompAccessInterceptor implements ChannelInterceptor, RoomSessionAccess {
     private final TokenService tokens;
     private final UserRepository users;
-    private final DuoRepository duos;
+    private final ParticipantLinkPolicy participantLinks;
     private final Map<String, SessionAccess> sessions = new ConcurrentHashMap<>();
 
-    private record SessionAccess(Long userId, Long duoId, String clientId, Instant expiresAt) {
+    private record SessionAccess(Long userId, Long groupId, String clientId, Instant expiresAt) {
         boolean valid() { return expiresAt != null && Instant.now().isBefore(expiresAt); }
     }
 
-    public StompAccessInterceptor(TokenService tokens, UserRepository users, DuoRepository duos) {
+    public StompAccessInterceptor(TokenService tokens, UserRepository users, ParticipantLinkPolicy participantLinks) {
         this.tokens = tokens;
         this.users = users;
-        this.duos = duos;
+        this.participantLinks = participantLinks;
     }
 
     @Override
@@ -61,8 +62,9 @@ public class StompAccessInterceptor implements ChannelInterceptor, RoomSessionAc
             }
             var user = users.findByEmail(email)
                     .orElseThrow(() -> new AccessDeniedException("Usuário não encontrado."));
-            Long activeDuoId = duos.findActiveDuoId(user.getId()).orElse(null);
-            var session = new SessionAccess(user.getId(), activeDuoId, headers.getFirstNativeHeader("room-client-id"), JWT.decode(token).getExpiresAtAsInstant());
+            Long activeGroupId = participantLinks.findActiveGroupFor(user.getId())
+                    .map(group -> group.id()).orElse(null);
+            var session = new SessionAccess(user.getId(), activeGroupId, headers.getFirstNativeHeader("room-client-id"), JWT.decode(token).getExpiresAtAsInstant());
             if (!session.valid()) throw new AccessDeniedException("Sessão expirada ou inválida.");
             headers.setUser(new UsernamePasswordAuthenticationToken(email, null, List.of()));
             sessions.put(sessionId, session);
@@ -85,8 +87,8 @@ public class StompAccessInterceptor implements ChannelInterceptor, RoomSessionAc
     }
 
     private boolean canReceive(SessionAccess session, String destination) {
-        if (!session.valid() || destination == null || session.duoId() == null) return false;
-        return destination.equals("/topic/duos/" + session.duoId() + "/room");
+        if (!session.valid() || destination == null || session.groupId() == null) return false;
+        return destination.equals("/topic/duos/" + session.groupId() + "/room");
     }
 
     @Override
